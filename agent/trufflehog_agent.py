@@ -61,13 +61,20 @@ class TruffleHogAgent(
     agent_persist_mixin.AgentPersistMixin,
     agent_report_vulnerability_mixin.AgentReportVulnMixin,
 ):
-    """Trufflehog agent."""
+    """
+    This class represents TruffleHog agent.
+    this class uses the TruffleHog tool to scan files for secrests.
+
+    Methods:
+        process(): This method runs the TruffleHog tool
+            and reports secrets found.
+    """
 
     def process(self, message: m.Message) -> None:
         """Runs the trufflehog tool ont the file/link recieved.
 
         Args:
-            message: the message containing the trufflehog tool input.
+            message: the message containing the trufflehog tool input file.
 
         Returns:
             None.
