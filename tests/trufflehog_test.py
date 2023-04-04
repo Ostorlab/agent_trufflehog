@@ -18,7 +18,7 @@ def testTruffleHog_scanFile_reportTwoVulnz(
 
     _run_command_mock = mocker.patch("subprocess.run", return_value=None)
     msg = message.Message.from_data(
-        selector="v3.asset.file", data={"content": "Basic auth:\nhttps://admin:admin@the-internet.herokuapp.com/basic_auth"}
+        selector="v3.asset.file", data={"content": b"Basic auth:\nhttps://admin:admin@the-internet.herokuapp.com/basic_auth"}
     )
 
     trufflehog_agent_file.process(msg)
@@ -27,7 +27,7 @@ def testTruffleHog_scanFile_reportTwoVulnz(
     assert agent_mock[0].selector == "v3.report.vulnerability"
 
 
-def testStringToDict_always_shouldBeEqual():
+def testStringToDict_always_shouldHaveSameOutput():
     input_value = (
         b'{"id": 1,'
         b'"first_name": "Jeanette",'
