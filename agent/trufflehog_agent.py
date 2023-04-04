@@ -38,7 +38,7 @@ def json_loader(result: bytes) -> dict:
     return [json.loads(v) for v in vulnz if v != ""]
 
 
-def prune_duplicates(dicts: list) -> list:
+def prune_duplicates_vulnerabilities(vulnz: list) -> list:
     """Prune the list of dictionaries from duplicates.
 
     Args:
@@ -48,12 +48,12 @@ def prune_duplicates(dicts: list) -> list:
         A list of unique secret dictionaries.
     """
     my_set: set[str] = set()
-    new_dicts: list = []
-    for d in dicts:
-        if d["Raw"] not in my_set:
-            new_dicts.append(d)
-        my_set.add(d["Raw"])
-    return new_dicts
+    new_vulnz: list = []
+    for vuln in vulnz:
+        if vuln["Raw"] not in my_set:
+            new_vulnz.append(vuln)
+        my_set.add(vuln["Raw"])
+    return new_vulnz
 
 
 class TruffleHogAgent(
@@ -87,17 +87,17 @@ class TruffleHogAgent(
 
         logger.info("managing output")
 
-        dicts = json_loader(cmd_output)
+        vulnz = json_loader(cmd_output)
 
-        dicts = prune_duplicates(dicts)
+        vulnz = prune_duplicates_vulnerabilities(vulnz)
 
         logger.info("reporting vulnerabilities")
 
-        for d in dicts:
+        for vuln in vulnz:
             self.report_vulnerability(
                 entry=kb.KB.SECRETS_REVIEW,
                 risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH,
-                technical_detail=f'Secret `{d["Redacted"]}` found in file `{message.data.get("path")}`',
+                technical_detail=f'Secret `{vuln["Redacted"]}` found in file `{message.data.get("path")}`',
             )
         del message
 
