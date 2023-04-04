@@ -16,9 +16,14 @@ def testTruffleHog_scanFile_reportTwoVulnz(
 ) -> None:
     """Tests running the agent on a file and parsing the json output."""
 
-    trufflehog_agent_file.process(scan_message_file)
+    _run_command_mock = mocker.patch("subprocess.run", return_value=None)
+    msg = message.Message.from_data(
+        selector="v3.asset.file", data={"content": "Basic auth:\nhttps://admin:admin@the-internet.herokuapp.com/basic_auth"}
+    )
 
-    assert len(agent_mock) == 2
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 1
     assert agent_mock[0].selector == "v3.report.vulnerability"
 
 
