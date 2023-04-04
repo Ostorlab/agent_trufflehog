@@ -15,8 +15,9 @@ def testTruffleHog_scanFile_reportTwoVulnz(
     agent_mock,
 ) -> None:
     """Tests running the agent on a file and parsing the json output."""
+
     trufflehog_agent_file.process(scan_message_file)
-    print(agent_mock)
+
     assert len(agent_mock) == 2
     assert agent_mock[0].selector == "v3.report.vulnerability"
 
@@ -24,8 +25,7 @@ def testTruffleHog_scanFile_reportTwoVulnz(
 def teststring_to_dict():
 
     input_value = (
-        b"{"
-        b'"id": 1,'
+        b'{id": 1,'
         b'"first_name": "Jeanette",'
         b'"last_name": "Penddreth",'
         b'"email": "jpenddreth0@census.gov",'
@@ -38,8 +38,7 @@ def teststring_to_dict():
         b'"last_name": "Frediani",'
         b'"email": "gfrediani1@senate.gov",'
         b'"gender": "Male",'
-        b'"ip_address": "229.179.4.212"'
-        b"}"
+        b'"ip_address": "229.179.4.212"}'
     )
     expected_result = [
         {
@@ -59,7 +58,9 @@ def teststring_to_dict():
             "ip_address": "229.179.4.212",
         },
     ]
+
     current_result = trufflehog_agent.string_to_dict(input_value)
+
     assert len(current_result) == len(expected_result)
     for elems in zip(current_result, expected_result):
         assert elems[0]["id"] == elems[1]["id"]
