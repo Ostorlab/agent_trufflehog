@@ -25,7 +25,7 @@ def testTruffleHog_scanFile_reportTwoVulnz(
 def teststring_to_dict():
 
     input_value = (
-        b'{id": 1,'
+        b'{"id": 1,'
         b'"first_name": "Jeanette",'
         b'"last_name": "Penddreth",'
         b'"email": "jpenddreth0@census.gov",'
