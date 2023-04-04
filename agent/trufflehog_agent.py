@@ -101,7 +101,7 @@ class TruffleHogAgent(
             self.report_vulnerability(
                 entry=kb.KB.SECRETS_REVIEW,
                 risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH,
-                technical_detail=f'Secret found "{d["Redacted"]}" in file {message.data.get("path")}',
+                technical_detail=f'Secret `{d["Redacted"]}` found in file `{message.data.get("path")}`',
             )
         del message
 
