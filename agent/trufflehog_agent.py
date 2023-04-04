@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-def string_to_dict(result: bytes) -> dict:
+def json_loader(result: bytes) -> dict:
     """Convertes bytes to a list of dictionaries.
 
     Args:
@@ -91,7 +91,7 @@ class TruffleHogAgent(
 
         logger.info("managing output")
 
-        dicts = string_to_dict(cmd_output)
+        dicts = json_loader(cmd_output)
 
         dicts = prune_duplicates(dicts)
 

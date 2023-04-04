@@ -69,7 +69,7 @@ def testStringToDict_always_shouldHaveSameOutput():
         },
     ]
 
-    current_result = trufflehog_agent.string_to_dict(input_value)
+    current_result = trufflehog_agent.json_loader(input_value)
 
     assert len(current_result) == len(expected_result)
     for elems in zip(current_result, expected_result):
