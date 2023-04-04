@@ -17,7 +17,7 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     """Tests running the agent on a file and parsing the json output."""
 
     mocker.patch(
-        "subprocess.run",
+        "subprocess.check_output",
         return_value=b'{"SourceMetadata":{"Data":{"Git":{"commit":"77b2a3e56973785a52ba4ae4b8dac61d4bac016f",'
         b'"file":"keys","email":"counter 003ccounter@counters-MacBook-Air.local003e",'
         b'"repository":"https://github.com/trufflesecurity/test_keys","timestamp":"2022-06-16 10:27:56 -0700"'
