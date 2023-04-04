@@ -1,4 +1,0 @@
-pylint
-pylint-quotes
-pytest
-pytest-cov
