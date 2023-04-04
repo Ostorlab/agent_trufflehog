@@ -17,7 +17,7 @@ from agent import trufflehog_agent
 def scan_message_file() -> message.Message:
     """Creates a dummy message of type v3.asset.file to be used by the agent for testing purposes."""
     selector = "v3.asset.file"
-    with open("./keys", "rb") as infile:
+    with open("./tests/keys", "rb") as infile:
         msg_data = {"content": infile.read()}
     return message.Message.from_data(selector, data=msg_data)
 
