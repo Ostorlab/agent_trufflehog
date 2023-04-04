@@ -21,7 +21,7 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
         return_value=b'{"SourceMetadata":{"Data":{"Git":{"commit":"77b2a3e56973785a52ba4ae4b8dac61d4bac016f",'
         b'"file":"keys","email":"counter 003ccounter@counters-MacBook-Air.local003e",'
         b'"repository":"https://github.com/trufflesecurity/test_keys","timestamp":"2022-06-16 10:27:56 -0700"'
-        b',"line":3}}},"SourceID":0,"SourceType":16,"SourceName":"trufflehog - git","DetectorType":17'
+        b',"line":3}}},"SourceID":0,"SourceType":16,"SourceName":"trufflehog - git","DetectorType":17,'
         b'"DetectorName":"URI","DecoderName":"BASE64","Verified":true,'
         b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
         b'"Redacted":"https://********:********@the-internet.herokuapp.com",'
