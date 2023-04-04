@@ -74,16 +74,16 @@ class TruffleHogAgent(
         """
         logger.info("Processing input.")
 
-        with tempfile.NamedTemporaryFile(delete=False) as target_file:
+        with tempfile.NamedTemporaryFile() as target_file:
             target_file.write(message.data.get("content"))
             target_file.seek(0)
             input_media = target_file.name
 
-        logger.info("Starting trufflehog tool.")
+            logger.info("Starting trufflehog tool.")
 
-        cmd_output = subprocess.check_output(
-            ["trufflehog", "filesystem", input_media, "--only-verified", "--json"]
-        )
+            cmd_output = subprocess.check_output(
+                ["trufflehog", "filesystem", input_media, "--only-verified", "--json"]
+            )
 
         logger.info("Parsing trufflehog output.")
 
