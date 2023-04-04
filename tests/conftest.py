@@ -30,7 +30,7 @@ def scan_message_github() -> message.Message:
     return message.Message.from_data(selector, data=msg_data)
 
 
-@pytest.fixture(name="truffle_agent")
+@pytest.fixture()
 def trufflehog_agent_file(
     agent_persist_mock: Dict[str | bytes, str | bytes]
 ) -> trufflehog_agent.TruffleHogAgent:
