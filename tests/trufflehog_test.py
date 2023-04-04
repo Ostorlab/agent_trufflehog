@@ -22,8 +22,7 @@ def testTruffleHog_scanFile_reportTwoVulnz(
     assert agent_mock[0].selector == "v3.report.vulnerability"
 
 
-def teststring_to_dict():
-
+def testStringToDict_always_shouldBeEqual():
     input_value = (
         b'{"id": 1,'
         b'"first_name": "Jeanette",'
