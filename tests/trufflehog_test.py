@@ -7,7 +7,7 @@ from pytest_mock import plugin
 from agent import trufflehog_agent
 
 
-def testTruffleHog_scanFile_reportTwoVulnz(
+def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     scan_message_file: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: Dict[str | bytes, str | bytes],
