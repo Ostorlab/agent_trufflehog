@@ -72,28 +72,29 @@ class TruffleHogAgent(
         Returns:
             None.
         """
-        logger.info("processing")
+        logger.info("Processing input.")
 
         with tempfile.NamedTemporaryFile(delete=False) as target_file:
             target_file.write(message.data.get("content"))
             target_file.seek(0)
             input_media = target_file.name
 
-        logger.info("starting trufflehog")
+        logger.info("Starting trufflehog tool.")
 
         cmd_output = subprocess.check_output(
             ["trufflehog", "filesystem", input_media, "--only-verified", "--json"]
         )
 
-        logger.info("managing output")
+        logger.info("Parsing trufflehog output.")
 
         vulnz = json_loader(cmd_output)
 
         vulnz = prune_duplicates_vulnerabilities(vulnz)
 
-        logger.info("reporting vulnerabilities")
+        logger.info("Reporting vulnerabilities.")
 
         for vuln in vulnz:
+            logger.info("Secret found : %s.", vuln["Redacted"])
             self.report_vulnerability(
                 entry=kb.KB.SECRETS_REVIEW,
                 risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH,
@@ -103,5 +104,5 @@ class TruffleHogAgent(
 
 
 if __name__ == "__main__":
-    logger.info("starting agent ...")
+    logger.info("Starting agent ...")
     TruffleHogAgent.main()
