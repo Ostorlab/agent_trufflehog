@@ -63,10 +63,6 @@ class TruffleHogAgent(
 ):
     """Trufflehog agent."""
 
-    def start(self) -> None:
-        """starting agent"""
-        logger.info("running start")
-
     def process(self, message: m.Message) -> None:
         """Runs the trufflehog tool ont the file/link recieved.
 
