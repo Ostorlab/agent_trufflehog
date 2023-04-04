@@ -16,9 +16,16 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
 ) -> None:
     """Tests running the agent on a file and parsing the json output."""
 
-    _run_command_mock = mocker.patch(
+    mocker.patch(
         "subprocess.run",
-        return_value=b'{"SourceMetadata":{"Data":{"Git":{"commit":"77b2a3e56973785a52ba4ae4b8dac61d4bac016f","file":"keys","email":"counter \u003ccounter@counters-MacBook-Air.local\u003e","repository":"https://github.com/trufflesecurity/test_keys","timestamp":"2022-06-16 10:27:56 -0700","line":3}}},"SourceID":0,"SourceType":16,"SourceName":"trufflehog - git","DetectorType":17,"DetectorName":"URI","DecoderName":"BASE64","Verified":true,"Raw":"https://admin:admin@the-internet.herokuapp.com","Redacted":"https://********:********@the-internet.herokuapp.com","ExtraData":null,"StructuredData":null}',
+        return_value=b'{"SourceMetadata":{"Data":{"Git":{"commit":"77b2a3e56973785a52ba4ae4b8dac61d4bac016f",'
+        b'"file":"keys","email":"counter 003ccounter@counters-MacBook-Air.local003e",'
+        b'"repository":"https://github.com/trufflesecurity/test_keys","timestamp":"2022-06-16 10:27:56 -0700"'
+        b',"line":3}}},"SourceID":0,"SourceType":16,"SourceName":"trufflehog - git","DetectorType":17'
+        b'"DetectorName":"URI","DecoderName":"BASE64","Verified":true,'
+        b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
+        b'"Redacted":"https://********:********@the-internet.herokuapp.com",'
+        b'"ExtraData":null,"StructuredData":null}',
     )
     msg = message.Message.from_data(
         selector="v3.asset.file",
