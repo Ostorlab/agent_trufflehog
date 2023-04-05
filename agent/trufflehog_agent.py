@@ -50,7 +50,7 @@ def prune_duplicates_vulnerabilities(vulnz: list) -> list:
     my_set: set[str] = set()
     new_vulnz: list = []
     for vuln in vulnz:
-        if vuln["Raw"] not in my_set:
+        if vuln.get("Raw", "") not in my_set:
             new_vulnz.append(vuln)
         my_set.add(vuln["Raw"])
     return new_vulnz
