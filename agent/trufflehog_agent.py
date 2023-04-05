@@ -34,11 +34,11 @@ def json_loader(result: bytes) -> list:
         A list of dictionaries.
     """
     str_output = result.decode("utf-8")
-    vulnz = str_output.split("\n")
-    return [json.loads(v) for v in vulnz if v != ""]
+    secrets = str_output.split("\n")
+    return [json.loads(secret) for secret in secrets if secret != ""]
 
 
-def prune_duplicates_vulnerabilities(vulnz: list) -> list:
+def prune_duplicates_vulnerabilities(secrets: list) -> list:
     """Prune the list of dictionaries from duplicates.
 
     Args:
@@ -48,12 +48,12 @@ def prune_duplicates_vulnerabilities(vulnz: list) -> list:
         A list of unique secret dictionaries.
     """
     my_set: set[str] = set()
-    new_vulnz: list = []
-    for vuln in vulnz:
-        if vuln.get("Raw", "") not in my_set:
-            new_vulnz.append(vuln)
-        my_set.add(vuln["Raw"])
-    return new_vulnz
+    new_secrets: list = []
+    for secret in secrets:
+        if secret.get("Raw", "") not in my_set:
+            new_secrets.append(secret)
+        my_set.add(secret["Raw"])
+    return new_secrets
 
 
 class TruffleHogAgent(
@@ -94,18 +94,18 @@ class TruffleHogAgent(
 
         logger.info("Parsing trufflehog output.")
 
-        vulnz = json_loader(cmd_output)
+        secrets = json_loader(cmd_output)
 
-        vulnz = prune_duplicates_vulnerabilities(vulnz)
+        secrets = prune_duplicates_vulnerabilities(secrets)
 
         logger.info("Reporting vulnerabilities.")
 
-        for vuln in vulnz:
-            logger.info("Secret found : %s.", vuln["Redacted"])
+        for secret in secrets:
+            logger.info("Secret found : %s.", secret["Redacted"])
             self.report_vulnerability(
                 entry=kb.KB.SECRETS_REVIEW,
                 risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH,
-                technical_detail=f'Secret `{vuln["Redacted"]}` found in file `{message.data.get("path")}`',
+                technical_detail=f'Secret `{secret["Redacted"]}` found in file `{message.data.get("path")}`',
             )
         del message
 
