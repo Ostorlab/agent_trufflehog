@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-def json_loader(result: bytes) -> dict:
+def json_loader(result: bytes) -> list:
     """Convertes bytes to a list of dictionaries.
 
     Args:
