@@ -7,11 +7,13 @@ COPY requirement.txt /requirement.txt
 RUN pip install --prefix=/install -r /requirement.txt
 RUN apk add git
 RUN git clone https://github.com/trufflesecurity/trufflehog.git trufflehog
-FROM base
-COPY --from=builder /install /usr/local
 COPY --from=golang:1.20-alpine /usr/local/go/ /usr/local/go/
 ENV PATH="/usr/local/go/bin:/root/go/bin:${PATH}"
-RUN cd /usr/local/trufflehog ; go install
+RUN cd /install/trufflehog ; go install
+
+FROM base
+COPY --from=builder /install /usr/local
+COPY --from=builder /root/go/bin/trufflehog /usr/local/bin/trufflehog
 RUN mkdir -p /app/agent
 COPY agent /app/agent
 COPY ostorlab.yaml /app/agent/ostorlab.yaml
