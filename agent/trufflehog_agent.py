@@ -112,4 +112,7 @@ class TruffleHogAgent(
 
 if __name__ == "__main__":
     logger.info("Starting agent ...")
-    TruffleHogAgent.main()
+    try:
+        TruffleHogAgent.main()
+    except subprocess.CalledProcessError as e:
+        logger.error(e.output)
