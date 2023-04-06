@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def json_loader(result: bytes) -> list:
+def load_newline_json(result: bytes) -> list:
     """Convertes bytes to a list of dictionaries.
 
     Args:
@@ -93,7 +93,7 @@ class TruffleHogAgent(
 
         logger.info("Parsing trufflehog output.")
 
-        secrets = json_loader(cmd_output)
+        secrets = load_newline_json(cmd_output)
 
         secrets = prune_duplicates_vulnerabilities(secrets)
 

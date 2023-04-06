@@ -77,7 +77,7 @@ def testStringToDict_always_shouldHaveSameOutput():
         },
     ]
 
-    current_result = trufflehog_agent.json_loader(input_value)
+    current_result = trufflehog_agent.load_newline_json(input_value)
 
     assert len(current_result) == len(expected_result)
     assert any(
