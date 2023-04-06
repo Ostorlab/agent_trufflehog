@@ -16,21 +16,21 @@ def load_newline_json(byte_data: bytes) -> list[dict[str:any]]:
     return list(json.loads(element) for element in data_list if element != "")
 
 
-def prune_vulnerabilities(
-    secrets: list[dict[str:any]],
+def prune_reports(
+    reports: list[dict[str:any]],
 ) -> list[dict[str:any]]:
     """Prune the list of dictionaries from duplicates.
 
     Args:
-        dicts: list of secrets found by trufflehog.
+        reports: list of secrets found by trufflehog.
 
     Returns:
         A list of unique secret dictionaries.
     """
-    my_set: set[str] = set()
-    new_secrets: list = []
-    for secret in secrets:
-        if secret.get("Raw", "") not in my_set:
-            new_secrets.append(secret)
-        my_set.add(secret["Raw"])
-    return new_secrets
+    dedup_set = set()
+    unique_reports: list = []
+    for secret in reports:
+        if secret.get("Raw", "") not in dedup_set:
+            unique_reports.append(secret)
+        dedup_set.add(secret["Raw"])
+    return unique_reports
