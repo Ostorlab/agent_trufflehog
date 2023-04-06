@@ -29,13 +29,16 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     )
     msg = message.Message.from_data(
         selector="v3.asset.file",
-        data={"content": b""},
+        data={"content": b"soe "},
     )
+    expected_technical_detail = "https://********:********@the-internet.herokuapp.com"
 
     trufflehog_agent_file.process(msg)
 
     assert len(agent_mock) == 1
     assert agent_mock[0].selector == "v3.report.vulnerability"
+    assert expected_technical_detail in agent_mock[0].data.get("technical_detail")
+    assert agent_mock[0].data.get("risk_rating") == "HIGH"
 
 
 def testStringToDict_always_shouldHaveSameOutput():
