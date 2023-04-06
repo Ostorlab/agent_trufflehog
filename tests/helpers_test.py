@@ -1,6 +1,6 @@
 """Unittest for helper funstions"""
 
-from agent.helpers import load_newline_json, prune_vulnerabilities
+from agent.helpers import load_newline_json, prune_reports
 
 
 def testLoadNewLineJson_always_LoadDataCorrectly():
@@ -92,6 +92,6 @@ def testPrune_always_dedupCorrectly():
         },
     ]
 
-    deduped_list = prune_vulnerabilities(dups_list)
+    deduped_list = prune_reports(dups_list)
 
     assert len(deduped_list) == 2

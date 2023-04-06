@@ -9,7 +9,7 @@ from ostorlab.agent import agent
 from ostorlab.agent.kb import kb
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from ostorlab.agent.message import message as m
-from agent.helpers import prune_vulnerabilities, load_newline_json
+from agent.helpers import prune_reports, load_newline_json
 
 
 logging.basicConfig(
@@ -59,7 +59,7 @@ class TruffleHogAgent(
 
             secrets = load_newline_json(cmd_output)
 
-        secrets = prune_vulnerabilities(secrets)
+        secrets = prune_reports(secrets)
 
         logger.info("Reporting vulnerabilities.")
 
