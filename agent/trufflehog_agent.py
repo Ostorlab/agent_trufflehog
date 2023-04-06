@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def load_newline_json(result: bytes) -> list:
+def load_newline_json(byte_data: bytes) -> list[dict[str:any]]:
     """Convertes bytes to a list of dictionaries.
 
     Args:
@@ -32,12 +32,12 @@ def load_newline_json(result: bytes) -> list:
     Returns:
         A list of dictionaries.
     """
-    str_output = result.decode("utf-8")
-    secrets = str_output.split("\n")
-    return [json.loads(secret) for secret in secrets if secret != ""]
+    string = byte_data.decode("utf-8")
+    data_list = string.split("\n")
+    return list([json.loads(element) for element in data_list if element != ""])
 
 
-def prune_duplicates_vulnerabilities(secrets: list) -> list:
+def prune_duplicates_vulnerabilities(secrets: list[dict[str:any]]) -> list[dict[str:any]]:
     """Prune the list of dictionaries from duplicates.
 
     Args:
