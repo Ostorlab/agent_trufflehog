@@ -106,7 +106,6 @@ class TruffleHogAgent(
                 risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH,
                 technical_detail=f'Secret `{secret["Redacted"]}` found in file `{message.data.get("path")}`',
             )
-        del message
 
 
 if __name__ == "__main__":
