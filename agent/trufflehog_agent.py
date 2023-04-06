@@ -21,7 +21,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel("DEBUG")
 
 
 def json_loader(result: bytes) -> list:
