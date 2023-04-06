@@ -37,7 +37,9 @@ def load_newline_json(byte_data: bytes) -> list[dict[str:any]]:
     return list([json.loads(element) for element in data_list if element != ""])
 
 
-def prune_duplicates_vulnerabilities(secrets: list[dict[str:any]]) -> list[dict[str:any]]:
+def prune_duplicates_vulnerabilities(
+    secrets: list[dict[str:any]],
+) -> list[dict[str:any]]:
     """Prune the list of dictionaries from duplicates.
 
     Args:
@@ -63,10 +65,6 @@ class TruffleHogAgent(
     """
     This class represents TruffleHog agent.
     this class uses the TruffleHog tool to scan files for secrests.
-
-    Methods:
-        process(): This method runs the TruffleHog tool
-            and reports secrets found.
     """
 
     def process(self, message: m.Message) -> None:
@@ -91,9 +89,9 @@ class TruffleHogAgent(
                 ["trufflehog", "filesystem", input_media, "--only-verified", "--json"]
             )
 
-        logger.info("Parsing trufflehog output.")
+            logger.info("Parsing trufflehog output.")
 
-        secrets = load_newline_json(cmd_output)
+            secrets = load_newline_json(cmd_output)
 
         secrets = prune_duplicates_vulnerabilities(secrets)
 
