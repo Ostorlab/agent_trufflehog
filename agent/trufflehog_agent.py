@@ -1,7 +1,6 @@
 """Trufflehog agent."""
 import logging
 import tempfile
-import json
 import subprocess
 
 from rich import logging as rich_logging
@@ -10,6 +9,7 @@ from ostorlab.agent import agent
 from ostorlab.agent.kb import kb
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from ostorlab.agent.message import message as m
+from agent.helpers import prune_vulnerabilities, load_newline_json
 
 
 logging.basicConfig(
@@ -21,40 +21,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-
-def load_newline_json(byte_data: bytes) -> list[dict[str:any]]:
-    """Convertes bytes to a list of dictionaries.
-
-    Args:
-        result: the message to be parsed into a list of dictionaries.
-
-    Returns:
-        A list of dictionaries.
-    """
-    string = byte_data.decode("utf-8")
-    data_list = string.split("\n")
-    return list([json.loads(element) for element in data_list if element != ""])
-
-
-def prune_duplicates_vulnerabilities(
-    secrets: list[dict[str:any]],
-) -> list[dict[str:any]]:
-    """Prune the list of dictionaries from duplicates.
-
-    Args:
-        dicts: list of secrets found by trufflehog.
-
-    Returns:
-        A list of unique secret dictionaries.
-    """
-    my_set: set[str] = set()
-    new_secrets: list = []
-    for secret in secrets:
-        if secret.get("Raw", "") not in my_set:
-            new_secrets.append(secret)
-        my_set.add(secret["Raw"])
-    return new_secrets
 
 
 class TruffleHogAgent(
@@ -93,7 +59,7 @@ class TruffleHogAgent(
 
             secrets = load_newline_json(cmd_output)
 
-        secrets = prune_duplicates_vulnerabilities(secrets)
+        secrets = prune_vulnerabilities(secrets)
 
         logger.info("Reporting vulnerabilities.")
 

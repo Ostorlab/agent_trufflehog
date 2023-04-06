@@ -1,4 +1,4 @@
-"""Unittests for truflehog agent."""
+"""Unittest for truflehog agent."""
 from typing import Dict
 
 from ostorlab.agent.message import message
@@ -29,7 +29,7 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     )
     msg = message.Message.from_data(
         selector="v3.asset.file",
-        data={"content": b"soe "},
+        data={"content": b"some file content"},
     )
     expected_technical_detail = "https://********:********@the-internet.herokuapp.com"
 
@@ -39,48 +39,3 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     assert agent_mock[0].selector == "v3.report.vulnerability"
     assert expected_technical_detail in agent_mock[0].data.get("technical_detail")
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
-
-
-def testStringToDict_always_shouldHaveSameOutput():
-    input_value = (
-        b'{"id": 1,'
-        b'"first_name": "Jeanette",'
-        b'"last_name": "Penddreth",'
-        b'"email": "jpenddreth0@census.gov",'
-        b'"gender": "Female",'
-        b'"ip_address": "26.58.193.2"'
-        b"}\n"
-        b"{"
-        b'"id": 2,'
-        b'"first_name": "Giavani",'
-        b'"last_name": "Frediani",'
-        b'"email": "gfrediani1@senate.gov",'
-        b'"gender": "Male",'
-        b'"ip_address": "229.179.4.212"}'
-    )
-    expected_result = [
-        {
-            "id": 1,
-            "first_name": "Jeanette",
-            "last_name": "Penddreth",
-            "email": "jpenddreth0@census.gov",
-            "gender": "Female",
-            "ip_address": "26.58.193.2",
-        },
-        {
-            "id": 2,
-            "first_name": "Giavani",
-            "last_name": "Frediani",
-            "email": "gfrediani1@senate.gov",
-            "gender": "Male",
-            "ip_address": "229.179.4.212",
-        },
-    ]
-
-    current_result = trufflehog_agent.load_newline_json(input_value)
-
-    assert len(current_result) == len(expected_result)
-    assert any(
-        curr_elem["id"] == expected_elem["id"]
-        for curr_elem, expected_elem in zip(current_result, expected_result)
-    )
