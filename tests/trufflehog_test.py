@@ -1,5 +1,5 @@
 """Unittest for truflehog agent."""
-from typing import Dict, Any
+from typing import Dict
 
 from ostorlab.agent.message import message
 from pytest_mock import plugin

@@ -9,7 +9,9 @@ from ostorlab.agent import agent
 from ostorlab.agent.kb import kb
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from ostorlab.agent.message import message as m
-from agent import helpers
+
+
+from agent import trufflehog_utility_functions
 
 
 logging.basicConfig(
@@ -45,7 +47,7 @@ class TruffleHogAgent(
         logger.info("Processing input.")
 
         with tempfile.NamedTemporaryFile() as target_file:
-            target_file.write(message.data.get("content"))
+            target_file.write(message.data.get("content", b""))
             target_file.seek(0)
             input_media = target_file.name
 
@@ -57,9 +59,9 @@ class TruffleHogAgent(
 
             logger.info("Parsing trufflehog output.")
 
-            secrets = helpers.load_newline_json(cmd_output)
+            secrets = trufflehog_utility_functions.load_newline_json(cmd_output)
 
-        secrets = helpers.prune_reports(secrets)
+        secrets = trufflehog_utility_functions.prune_reports(secrets)
 
         logger.info("Reporting vulnerabilities.")
 

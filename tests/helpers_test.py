@@ -1,6 +1,6 @@
 """Unittest for helper funstions"""
 
-from agent.helpers import load_newline_json, prune_reports
+from agent import trufflehog_utility_functions
 
 
 def testLoadNewLineJson_always_LoadDataCorrectly() -> None:
@@ -39,7 +39,7 @@ def testLoadNewLineJson_always_LoadDataCorrectly() -> None:
         },
     ]
 
-    current_result = load_newline_json(input_value)
+    current_result = trufflehog_utility_functions.load_newline_json(input_value)
 
     assert len(current_result) == len(expected_result)
     assert any(
@@ -92,6 +92,6 @@ def testPruneReports_always_dedupCorrectly() -> None:
         },
     ]
 
-    deduped_list = prune_reports(dups_list)
+    deduped_list = trufflehog_utility_functions.prune_reports(dups_list)
 
     assert len(deduped_list) == 2
