@@ -1,5 +1,5 @@
 """Unittest for truflehog agent."""
-from typing import Dict
+from typing import Dict, Any
 
 from ostorlab.agent.message import message
 from pytest_mock import plugin
@@ -12,7 +12,7 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: Dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
-    agent_mock,
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent on a file and parsing the json output."""
 
@@ -31,11 +31,12 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
         selector="v3.asset.file",
         data={"content": b"some file content"},
     )
-    expected_technical_detail = "https://********:********@the-internet.herokuapp.com"
 
     trufflehog_agent_file.process(msg)
 
     assert len(agent_mock) == 1
     assert agent_mock[0].selector == "v3.report.vulnerability"
-    assert expected_technical_detail in agent_mock[0].data.get("technical_detail")
+    assert "https://********:********@the-internet.herokuapp.com" in str(
+        agent_mock[0].data.get("technical_detail")
+    )
     assert agent_mock[0].data.get("risk_rating") == "HIGH"

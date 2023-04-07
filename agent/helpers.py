@@ -3,7 +3,7 @@ import json
 from typing import Any
 
 
-def load_newline_json(byte_data: bytes) -> list[dict[str,Any]]:
+def load_newline_json(byte_data: bytes) -> list[dict[str, Any]]:
     """Convertes bytes to a list of dictionaries.
 
     Args:
@@ -18,8 +18,8 @@ def load_newline_json(byte_data: bytes) -> list[dict[str,Any]]:
 
 
 def prune_reports(
-    reports: list[dict[str,Any]],
-) -> list[dict[str,Any]]:
+    reports: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """Prune the list of dictionaries from duplicates.
 
     Args:

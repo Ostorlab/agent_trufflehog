@@ -3,7 +3,7 @@
 from agent.helpers import load_newline_json, prune_reports
 
 
-def testLoadNewLineJson_always_LoadDataCorrectly():
+def testLoadNewLineJson_always_LoadDataCorrectly() -> None:
     input_value = (
         b'{"id": 1,'
         b'"first_name": "Jeanette",'
@@ -48,7 +48,7 @@ def testLoadNewLineJson_always_LoadDataCorrectly():
     )
 
 
-def testPrune_always_dedupCorrectly():
+def testPruneReports_always_dedupCorrectly() -> None:
     dups_list = [
         {
             "Raw": 1,
