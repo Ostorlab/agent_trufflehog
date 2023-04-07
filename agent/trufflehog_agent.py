@@ -12,7 +12,8 @@ from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from ostorlab.agent.message import message as m
 
 
-from agent import trufflehog_utility_functions
+from agent import utils
+
 
 
 logging.basicConfig(
@@ -36,7 +37,7 @@ class TruffleHogAgent(
     this class uses the TruffleHog tool to scan files for secrests.
     """
 
-    def __report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
+    def _report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
         for vuln in vulnz:
             logger.info("Secret found : %s.", vuln["Redacted"])
             self.report_vulnerability(
@@ -45,12 +46,12 @@ class TruffleHogAgent(
                 technical_detail=f'Secret `{vuln["Redacted"]}` found in file `{message.data.get("path")}`',
             )
 
-    def __process_scanner_output(self, output: bytes) -> list[dict[str, Any]]:
-        secrets = trufflehog_utility_functions.load_newline_json(output)
-        secrets = trufflehog_utility_functions.prune_reports(secrets)
+    def _process_scanner_output(self, output: bytes) -> list[dict[str, Any]]:
+        secrets = utils.load_newline_json(output)
+        secrets = utils.prune_reports(secrets)
         return secrets
 
-    def __run_scanner(self, input_file: str) -> bytes | None:
+    def _run_scanner(self, input_file: str) -> bytes | None:
         try:
             cmd_output = subprocess.check_output(
                 ["trufflehog", "filesystem", input_file, "--only-verified", "--json"]
@@ -77,17 +78,17 @@ class TruffleHogAgent(
 
             logger.info("Starting trufflehog tool.")
 
-            cmd_output = self.__run_scanner(input_media)
+            cmd_output = self._run_scanner(input_media)
             if cmd_output is None:
                 return
 
             logger.info("Parsing trufflehog output.")
 
-            secrets = self.__process_scanner_output(cmd_output)
+            secrets = self._process_scanner_output(cmd_output)
 
         logger.info("Reporting vulnerabilities.")
 
-        self.__report_vulnz(secrets, message)
+        self._report_vulnz(secrets, message)
 
 
 if __name__ == "__main__":
