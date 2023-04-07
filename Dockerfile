@@ -15,8 +15,8 @@ RUN pip install --prefix=/install -r /requirement.txt
 
 FROM base
 COPY --from=builder /install /usr/local
-RUN mkdir -p /app/agent
 COPY --from=scanner /install/trufflehog/trufflehog /usr/local/bin/trufflehog
+RUN mkdir -p /app/agent
 COPY agent /app/agent
 COPY ostorlab.yaml /app/agent/ostorlab.yaml
 WORKDIR /app

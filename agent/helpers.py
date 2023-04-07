@@ -1,8 +1,9 @@
 """Helper functions for the Trufflehog agent"""
 import json
+from typing import Any
 
 
-def load_newline_json(byte_data: bytes) -> list[dict[str:any]]:
+def load_newline_json(byte_data: bytes) -> list[dict[str,Any]]:
     """Convertes bytes to a list of dictionaries.
 
     Args:
@@ -17,8 +18,8 @@ def load_newline_json(byte_data: bytes) -> list[dict[str:any]]:
 
 
 def prune_reports(
-    reports: list[dict[str:any]],
-) -> list[dict[str:any]]:
+    reports: list[dict[str,Any]],
+) -> list[dict[str,Any]]:
     """Prune the list of dictionaries from duplicates.
 
     Args:
@@ -28,7 +29,7 @@ def prune_reports(
         A list of unique secret dictionaries.
     """
     dedup_set = set()
-    unique_reports: list = []
+    unique_reports = []
     for secret in reports:
         if secret.get("Raw", "") not in dedup_set:
             unique_reports.append(secret)
