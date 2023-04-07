@@ -17,6 +17,7 @@ FROM base
 COPY --from=builder /install /usr/local
 COPY --from=scanner /install/trufflehog/trufflehog /usr/local/bin/trufflehog
 RUN mkdir -p /app/agent
+ENV PYTHONPATH=/app
 COPY agent /app/agent
 COPY ostorlab.yaml /app/agent/ostorlab.yaml
 WORKDIR /app
