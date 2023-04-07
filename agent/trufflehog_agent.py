@@ -15,7 +15,6 @@ from ostorlab.agent.message import message as m
 from agent import utils
 
 
-
 logging.basicConfig(
     format="%(message)s",
     datefmt="[%X]",
