@@ -3,6 +3,7 @@ import logging
 import tempfile
 import subprocess
 from typing import Any
+import re
 
 from rich import logging as rich_logging
 from ostorlab.agent.mixins import agent_persist_mixin
@@ -36,6 +37,31 @@ class TruffleHogAgent(
     this class uses the TruffleHog tool to scan files for secrests.
     """
 
+    def _process_and_run_link(self, message:m.Message) -> bytes | None:
+        link = message.data.get("url")
+        link_type:str
+        if re.search("((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(github.com)([\w\.@\:/\-~]+)(\.git)(/)?", link) is not None:
+            link_type = "github"
+        elif re.search("((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(gitlab.com)([\w\.@\:/\-~]+)(\.git)(/)?", link) is not None:
+            link_type = "gitlab"
+        else:
+            return None
+        
+        logger.info("Starting trufflehog tool.")
+        
+        return self._run_scanner(link, link_type)
+    
+    def _process_and_run_file(self, message:m.Message) -> bytes | None:
+        with tempfile.NamedTemporaryFile() as target_file:
+            target_file.write(message.data.get("content", b""))
+            target_file.seek(0)
+            input_media = target_file.name
+
+            logger.info("Starting trufflehog tool.")
+
+            cmd_output = self._run_scanner(input_media, "filesystem")
+        return cmd_output
+
     def _report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
         for vuln in vulnz:
             logger.info("Secret found : %s.", vuln["Redacted"])
@@ -50,17 +76,18 @@ class TruffleHogAgent(
         secrets = utils.prune_reports(secrets)
         return secrets
 
-    def _run_scanner(self, input_file: str) -> bytes | None:
+    def _run_scanner(self, input_media: str, input_type) -> bytes | None:
         try:
             cmd_output = subprocess.check_output(
-                ["trufflehog", "filesystem", input_file, "--only-verified", "--json"]
+                ["trufflehog", input_type, input_media, "--only-verified", "--json"]
             )
         except subprocess.CalledProcessError:
             return None
         return cmd_output
 
     def process(self, message: m.Message) -> None:
-        """Runs the trufflehog tool ont the file/link recieved.
+        """
+        Runs the trufflehog tool ont the file/link recieved.
 
         Args:
             message: the message containing the trufflehog tool input file.
@@ -69,21 +96,18 @@ class TruffleHogAgent(
             None.
         """
         logger.info("Processing input.")
+        
+        if message.selector == "v3.asset.link":
+            cmd_output = self._process_and_run_link(message)
+        elif message.selector == "v3.asset.file":
+            cmd_output = self._process_and_run_file(message)
 
-        with tempfile.NamedTemporaryFile() as target_file:
-            target_file.write(message.data.get("content", b""))
-            target_file.seek(0)
-            input_media = target_file.name
+        if cmd_output is None:
+            return
 
-            logger.info("Starting trufflehog tool.")
+        logger.info("Parsing trufflehog output.")
 
-            cmd_output = self._run_scanner(input_media)
-            if cmd_output is None:
-                return
-
-            logger.info("Parsing trufflehog output.")
-
-            secrets = self._process_scanner_output(cmd_output)
+        secrets = self._process_scanner_output(cmd_output)
 
         logger.info("Reporting vulnerabilities.")
 
