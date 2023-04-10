@@ -41,6 +41,7 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     )
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
 
+
 def testTruffleHog_whenGithubLink_reportVulnerabilities(
     scan_message_gihub_without_key: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,

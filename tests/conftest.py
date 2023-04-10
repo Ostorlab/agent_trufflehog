@@ -21,12 +21,14 @@ def scan_message_file() -> message.Message:
         msg_data = {"content": infile.read()}
     return message.Message.from_data(selector, data=msg_data)
 
+
 @pytest.fixture
 def scan_message_gihub_without_key() -> message.Message:
     """Creates a dummy message of type v3.asset.link to be used by the agent for testing purposes."""
     selector = "v3.asset.link"
     msg_data = {"url": "https://github.com/trufflesecurity/test_keys.git"}
     return message.Message.from_data(selector, data=msg_data)
+
 
 @pytest.fixture()
 def trufflehog_agent_file(
