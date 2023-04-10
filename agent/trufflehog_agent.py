@@ -37,21 +37,33 @@ class TruffleHogAgent(
     this class uses the TruffleHog tool to scan files for secrests.
     """
 
-    def _process_and_run_link(self, message:m.Message) -> bytes | None:
-        link = message.data.get("url")
-        link_type:str
-        if re.search("((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(github.com)([\w\.@\:/\-~]+)(\.git)(/)?", link) is not None:
+    def _process_and_run_link(self, message: m.Message) -> bytes | None:
+        link = message.data.get("url", "")
+        link_type: str
+        if (
+            re.search(
+                r"((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(github.com)([\w\.@\:/\-~]+)(\.git)(/)?",
+                link,
+            )
+            is not None
+        ):
             link_type = "git"
-        elif re.search("((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(gitlab.com)([\w\.@\:/\-~]+)(\.git)(/)?", link) is not None:
+        elif (
+            re.search(
+                r"((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(gitlab.com)([\w\.@\:/\-~]+)(\.git)(/)?",
+                link,
+            )
+            is not None
+        ):
             link_type = "gitlab"
         else:
             return None
-        
+
         logger.info("Starting trufflehog scanner.")
-        print("link : ", link, "link type : ", link_type)
+
         return self._run_scanner(link, link_type)
-    
-    def _process_and_run_file(self, message:m.Message) -> bytes | None:
+
+    def _process_and_run_file(self, message: m.Message) -> bytes | None:
         with tempfile.NamedTemporaryFile() as target_file:
             target_file.write(message.data.get("content", b""))
             target_file.seek(0)
@@ -76,13 +88,14 @@ class TruffleHogAgent(
         secrets = utils.prune_reports(secrets)
         return secrets
 
-    def _run_scanner(self, input_media: str, input_type) -> bytes | None:
+    def _run_scanner(self, input_media: str, input_type: str) -> bytes | None:
         try:
             cmd_output = subprocess.check_output(
                 ["trufflehog", input_type, input_media, "--only-verified", "--json"]
             )
         except subprocess.CalledProcessError:
             return None
+        logger.info("out and away")
         return cmd_output
 
     def process(self, message: m.Message) -> None:
@@ -96,7 +109,7 @@ class TruffleHogAgent(
             None.
         """
         logger.info("Processing input.")
-        
+
         if message.selector == "v3.asset.link":
             cmd_output = self._process_and_run_link(message)
         elif message.selector == "v3.asset.file":

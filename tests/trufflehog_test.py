@@ -47,24 +47,12 @@ def testTruffleHog_whenGithubLink_reportVulnerabilities(
     agent_persist_mock: Dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
-) ->    None:
+) -> None:
     """Tests running the agent on a file and parsing the json output."""
 
-    # mocker.patch(
-    #     "subprocess.check_output",
-    #     return_value=b'https://github.com/trufflesecurity/test_keys.git',
-    # )
-    # msg = message.Message.from_data(
-    #     selector="v3.asset.file",
-    #     data={"content": b"some file content"},
-    # )
-
     trufflehog_agent_file.process(scan_message_gihub_without_key)
-    print("----->", len(agent_mock))
-    print([agen.data.get("technical_detail") for agen in agent_mock])
+
     assert len(agent_mock) == 3
     assert agent_mock[0].selector == "v3.report.vulnerability"
-    assert "AKIAYVP4CIPPERUVIFXG" in str(
-        agent_mock[0].data.get("technical_detail")
-    )
+    assert "AKIAYVP4CIPPERUVIFXG" in str(agent_mock[0].data.get("technical_detail"))
     assert agent_mock[0].data.get("risk_rating") == "HIGH"

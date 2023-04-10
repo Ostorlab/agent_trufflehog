@@ -44,20 +44,3 @@ def trufflehog_agent_file(
         )
         agent_object = trufflehog_agent.TruffleHogAgent(definition, settings)
     return agent_object
-
-@pytest.fixture()
-def trufflehog_agent_github(
-    agent_persist_mock: Dict[str | bytes, str | bytes]
-) -> trufflehog_agent.TruffleHogAgent:
-    with (pathlib.Path(__file__).parent.parent / "ostorlab.yaml").open() as yaml_o:
-        definition = agent_definitions.AgentDefinition.from_yaml(yaml_o)
-        settings = runtime_definitions.AgentSettings(
-            key="agent/ostorlab/trufflehog",
-            bus_url="NA",
-            bus_exchange_topic="NA",
-            args=[],
-            healthcheck_port=random.randint(5000, 6000),
-            redis_url="redis://guest:guest@localhost:6379",
-        )
-        agent_object = trufflehog_agent.TruffleHogAgent(definition, settings)
-    return agent_object
