@@ -41,14 +41,14 @@ class TruffleHogAgent(
         link = message.data.get("url")
         link_type:str
         if re.search("((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(github.com)([\w\.@\:/\-~]+)(\.git)(/)?", link) is not None:
-            link_type = "github"
+            link_type = "git"
         elif re.search("((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(gitlab.com)([\w\.@\:/\-~]+)(\.git)(/)?", link) is not None:
             link_type = "gitlab"
         else:
             return None
         
-        logger.info("Starting trufflehog tool.")
-        
+        logger.info("Starting trufflehog scanner.")
+        print("link : ", link, "link type : ", link_type)
         return self._run_scanner(link, link_type)
     
     def _process_and_run_file(self, message:m.Message) -> bytes | None:
@@ -57,7 +57,7 @@ class TruffleHogAgent(
             target_file.seek(0)
             input_media = target_file.name
 
-            logger.info("Starting trufflehog tool.")
+            logger.info("Starting trufflehog scanner.")
 
             cmd_output = self._run_scanner(input_media, "filesystem")
         return cmd_output
