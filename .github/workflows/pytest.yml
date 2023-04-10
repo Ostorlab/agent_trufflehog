@@ -32,7 +32,8 @@ jobs:
         python -m pip install -r requirement.txt
         python -m pip install -r tests/test-requirement.txt
         git clone https://github.com/trufflesecurity/trufflehog.git
-        cd trufflehog ; go install
+        cd trufflehog ; go build -o trufflehog
+        cp ./trufflehog /usr/local/bin/trufflehog
     - name: Runnning tests with pytest.
       run: |
         pytest
