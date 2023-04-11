@@ -55,7 +55,8 @@ class TruffleHogAgent(
             cmd_output = subprocess.check_output(
                 ["trufflehog", input_type, input_media, "--only-verified", "--json"]
             )
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            logger.error("Error : %s", e)
             return None
         return cmd_output
 
@@ -82,8 +83,10 @@ class TruffleHogAgent(
                 message.data.get("message", b"")
             )
         elif message.selector == "v3.capture.request_response":
-            response: dict[str, Any] = message.data.get("response", {})
+            response = message.data.get("response", {})
             cmd_output = process_input.process_and_run_file(response.get("body", b""))
+        else:
+            raise ValueError(f"Unsuported selector {message.selector}.")
         if cmd_output is None:
             return
 
