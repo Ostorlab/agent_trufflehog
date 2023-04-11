@@ -9,7 +9,7 @@ description: |
   ```shell
   ostorlab scan run --install --agent agent/ostorlab/trufflehog file [YOUR_TARGET_FILE]
   ```
-  This command will download and install `agent/ostorlab/trufflehog` and target the ip `8.8.8.8`.
+  This command will download and install `agent/ostorlab/trufflehog` and the target file`.
   For more information, please refer to the [Ostorlab Documentation](https://github.com/Ostorlab/ostorlab/blob/main/README.md)
   ## Usage
   Agent TruffleHog can be installed directly from the ostorlab agent store or built from this repository.
@@ -47,6 +47,8 @@ description: |
 in_selectors:
   - v3.asset.file
   - v3.asset.link
+  - v3.capture.logs
+  - v3.capture.request_response
 out_selectors:
   - v3.report.vulnerability
 docker_file_path : Dockerfile # Dockerfile path for automated release build.
