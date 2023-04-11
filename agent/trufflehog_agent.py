@@ -88,14 +88,13 @@ class TruffleHogAgent(
         secrets = utils.prune_reports(secrets)
         return secrets
 
-    def _run_scanner(self, input_media: str, input_type: str) -> bytes | None:
+    def _run_scanner(self, input_type: str, input_media: str) -> bytes | None:
         try:
             cmd_output = subprocess.check_output(
                 ["trufflehog", input_type, input_media, "--only-verified", "--json"]
             )
         except subprocess.CalledProcessError:
             return None
-        logger.info("out and away")
         return cmd_output
 
     def process(self, message: m.Message) -> None:
