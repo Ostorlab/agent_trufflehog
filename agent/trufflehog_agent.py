@@ -13,7 +13,7 @@ from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from ostorlab.agent.message import message as m
 
 
-from agent import utils
+from agent import utils, process_input
 
 
 logging.basicConfig(
@@ -37,43 +37,6 @@ class TruffleHogAgent(
     this class uses the TruffleHog tool to scan files for secrests.
     """
 
-    def _process_and_run_link(self, message: m.Message) -> bytes | None:
-        link = message.data.get("url", "")
-        link_type: str
-        if (
-            re.search(
-                r"((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(github.com)([\w\.@\:/\-~]+)(\.git)(/)?",
-                link,
-            )
-            is not None
-        ):
-            link_type = "git"
-        elif (
-            re.search(
-                r"((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)(gitlab.com)([\w\.@\:/\-~]+)(\.git)(/)?",
-                link,
-            )
-            is not None
-        ):
-            link_type = "gitlab"
-        else:
-            return None
-
-        logger.info("Starting trufflehog scanner.")
-
-        return self._run_scanner(link, link_type)
-
-    def _process_and_run_file(self, message: m.Message) -> bytes | None:
-        with tempfile.NamedTemporaryFile() as target_file:
-            target_file.write(message.data.get("content", b""))
-            target_file.seek(0)
-            input_media = target_file.name
-
-            logger.info("Starting trufflehog scanner.")
-
-            cmd_output = self._run_scanner(input_media, "filesystem")
-        return cmd_output
-
     def _report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
         for vuln in vulnz:
             logger.info("Secret found : %s.", vuln["Redacted"])
@@ -88,7 +51,8 @@ class TruffleHogAgent(
         secrets = utils.prune_reports(secrets)
         return secrets
 
-    def _run_scanner(self, input_type: str, input_media: str) -> bytes | None:
+    @staticmethod
+    def _run_scanner(input_type: str, input_media: str) -> bytes | None:
         try:
             cmd_output = subprocess.check_output(
                 ["trufflehog", input_type, input_media, "--only-verified", "--json"]
@@ -107,12 +71,14 @@ class TruffleHogAgent(
         Returns:
             None.
         """
-        logger.info("Processing input.")
+        logger.info("Processing input and Starting trufflehog.")
 
         if message.selector == "v3.asset.link":
-            cmd_output = self._process_and_run_link(message)
+            cmd_output = process_input.process_and_run_link(message.data.get("url", ""))
         elif message.selector == "v3.asset.file":
-            cmd_output = self._process_and_run_file(message)
+            cmd_output = process_input.process_and_run_file(
+                message.data.get("content", b"")
+            )
 
         if cmd_output is None:
             return
