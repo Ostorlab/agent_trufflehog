@@ -5,7 +5,7 @@ import re
 from agent import trufflehog_agent
 
 
-def process_and_run_link(link: str) -> bytes | None:
+def process_and_run_link(link: str) -> str | None:
     link_type: str
     if (
         re.search(
@@ -25,7 +25,7 @@ def process_and_run_link(link: str) -> bytes | None:
         link_type = "gitlab"
     else:
         return None
-    return trufflehog_agent.TruffleHogAgent.run_scanner(link, link_type)
+    return link_type
 
 
 def process_and_run_file(content: bytes) -> bytes | None:

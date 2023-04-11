@@ -73,7 +73,9 @@ class TruffleHogAgent(
         logger.info("Processing input and Starting trufflehog.")
 
         if message.selector == "v3.asset.link":
-            cmd_output = process_input.process_and_run_link(message.data.get("url", ""))
+            link = message.data.get("url", "")
+            link_type = process_input.process_and_run_link(link)
+            cmd_output = self.run_scanner(link_type, link)
         elif message.selector == "v3.asset.file":
             cmd_output = process_input.process_and_run_file(
                 message.data.get("content", b"")
