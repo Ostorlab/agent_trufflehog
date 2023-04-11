@@ -1,9 +1,7 @@
 """Trufflehog agent."""
 import logging
-import tempfile
 import subprocess
 from typing import Any
-import re
 
 from rich import logging as rich_logging
 from ostorlab.agent.mixins import agent_persist_mixin
@@ -52,7 +50,7 @@ class TruffleHogAgent(
         return secrets
 
     @staticmethod
-    def _run_scanner(input_type: str, input_media: str) -> bytes | None:
+    def run_scanner(input_type: str, input_media: str) -> bytes | None:
         try:
             cmd_output = subprocess.check_output(
                 ["trufflehog", input_type, input_media, "--only-verified", "--json"]
@@ -79,7 +77,13 @@ class TruffleHogAgent(
             cmd_output = process_input.process_and_run_file(
                 message.data.get("content", b"")
             )
-
+        elif message.selector == "v3.capture.logs":
+            cmd_output = process_input.process_and_run_file(
+                message.data.get("message", b"")
+            )
+        elif message.selector == "v3.capture.request_response":
+            response: dict[str, Any] = message.data.get("response", {})
+            cmd_output = process_input.process_and_run_file(response.get("body", b""))
         if cmd_output is None:
             return
 

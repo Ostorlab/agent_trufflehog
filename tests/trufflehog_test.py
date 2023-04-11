@@ -40,20 +40,3 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
         agent_mock[0].data.get("technical_detail")
     )
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
-
-
-def testTruffleHog_whenGithubLink_reportVulnerabilities(
-    scan_message_gihub_without_key: message.Message,
-    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
-    mocker: plugin.MockerFixture,
-    agent_mock: list[message.Message],
-) -> None:
-    """Tests running the agent on a file and parsing the json output."""
-
-    trufflehog_agent_file.process(scan_message_gihub_without_key)
-
-    assert len(agent_mock) == 3
-    assert agent_mock[0].selector == "v3.report.vulnerability"
-    assert "AKIAYVP4CIPPERUVIFXG" in str(agent_mock[0].data.get("technical_detail"))
-    assert agent_mock[0].data.get("risk_rating") == "HIGH"

@@ -1,3 +1,5 @@
+"""Module that provides functions to handle specific input selectors."""
+
 import tempfile
 import re
 from agent import trufflehog_agent
@@ -23,7 +25,7 @@ def process_and_run_link(link: str) -> bytes | None:
         link_type = "gitlab"
     else:
         return None
-    return trufflehog_agent.TruffleHogAgent._run_scanner(link, link_type)
+    return trufflehog_agent.TruffleHogAgent.run_scanner(link, link_type)
 
 
 def process_and_run_file(content: bytes) -> bytes | None:
@@ -31,7 +33,7 @@ def process_and_run_file(content: bytes) -> bytes | None:
         target_file.write(content)
         target_file.seek(0)
         input_file = target_file.name
-        cmd_output = trufflehog_agent.TruffleHogAgent._run_scanner(
+        cmd_output = trufflehog_agent.TruffleHogAgent.run_scanner(
             input_file, "filesystem"
         )
     return cmd_output
