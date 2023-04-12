@@ -34,6 +34,6 @@ def process_file(content: bytes) -> bytes | None:
         target_file.seek(0)
         input_file = target_file.name
         cmd_output = trufflehog_agent.TruffleHogAgent.run_scanner(
-            input_file, "filesystem"
+            "filesystem", input_file
         )
     return cmd_output
