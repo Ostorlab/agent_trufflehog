@@ -16,6 +16,7 @@ RUN pip install --prefix=/install -r /requirement.txt
 FROM base
 COPY --from=builder /install /usr/local
 COPY --from=scanner /install/trufflehog/trufflehog /usr/local/bin/trufflehog
+# trufflehog agent uses git for the github repo option
 RUN apk add git
 RUN mkdir -p /app/agent
 ENV PYTHONPATH=/app
