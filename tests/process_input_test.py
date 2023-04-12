@@ -1,38 +1,31 @@
 """Tests for the process_input Module."""
+import pytest
+
 from agent import process_input
 
 
-def testProcessLink_Always_returnCorrectType() -> None:
-    github_links = [
-        "https://github.com/user/repo.git",
-        "http://github.com/Ostorlab/agent_trufflehog.git",
-    ]
-    gitlab_links = [
-        "https://gitlab.com/kalilinux/packages/trufflehog.git",
-        "http://gitlab.com/open-source-projects-lambda/cpython_mirror.git",
-    ]
-    other_links = [
-        "http://www.example.com/",
-        "http://www.example.edu/ball/box.html",
-        "https://sample.info/?insect=fireman&porter=attraction#cave",
-    ]
+@pytest.mark.parametrize(
+    "github_link, gitlab_link, other_link",
+    [
+        (
+            "https://github.com/user/repo.git",
+            "https://gitlab.com/kalilinux/packages/trufflehog.git",
+            "http://www.example.com/",
+        ),
+        (
+            "http://github.com/Ostorlab/agent_trufflehog.git",
+            "http://gitlab.com/open-source-projects-lambda/cpython_mirror.git",
+            "http://www.example.edu/ball/box.html",
+        ),
+    ],
+)
+def testProcessLink_Always_returnCorrectType(
+    github_link: str, gitlab_link: str, other_link: str
+) -> None:
+    github_match = str(process_input.process_link(github_link))
+    gitlab_match = str(process_input.process_link(gitlab_link))
+    other_link = str(process_input.process_link(other_link))
 
-    github_match = [
-        process_input.process_link(link)
-        for link in github_links
-        if process_input.process_link(link) == "git"
-    ]
-    gitlab_match = [
-        process_input.process_link(link)
-        for link in gitlab_links
-        if process_input.process_link(link) == "gitlab"
-    ]
-    other_match = [
-        process_input.process_link(link)
-        for link in other_links
-        if process_input.process_link(link) == "gitlab"
-    ]
-
-    assert len(github_links) == len(github_match)
-    assert len(gitlab_links) == len(gitlab_match)
-    assert len(other_match) == 0
+    assert github_match == "git"
+    assert gitlab_match == "gitlab"
+    assert other_link == "None"
