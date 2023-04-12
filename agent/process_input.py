@@ -5,7 +5,7 @@ import re
 from agent import trufflehog_agent
 
 
-def process_and_run_link(link: str) -> str | None:
+def process_link(link: str) -> str | None:
     link_type: str
     if (
         re.search(
@@ -28,7 +28,7 @@ def process_and_run_link(link: str) -> str | None:
     return link_type
 
 
-def process_and_run_file(content: bytes) -> bytes | None:
+def process_file(content: bytes) -> bytes | None:
     with tempfile.NamedTemporaryFile() as target_file:
         target_file.write(content)
         target_file.seek(0)

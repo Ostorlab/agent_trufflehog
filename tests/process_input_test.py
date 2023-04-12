@@ -18,19 +18,19 @@ def testProcessLink_Always_returnCorrectType():
     ]
 
     github_match = [
-        process_input.process_and_run_link(link)
+        process_input.process_link(link)
         for link in github_links
-        if process_input.process_and_run_link(link) == "git"
+        if process_input.process_link(link) == "git"
     ]
     gitlab_match = [
-        process_input.process_and_run_link(link)
+        process_input.process_link(link)
         for link in gitlab_links
-        if process_input.process_and_run_link(link) == "gitlab"
+        if process_input.process_link(link) == "gitlab"
     ]
     other_match = [
-        process_input.process_and_run_link(link)
+        process_input.process_link(link)
         for link in other_links
-        if process_input.process_and_run_link(link) == "gitlab"
+        if process_input.process_link(link) == "gitlab"
     ]
 
     assert len(github_links) == len(github_match)
