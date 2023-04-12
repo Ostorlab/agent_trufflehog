@@ -75,15 +75,11 @@ class TruffleHogAgent(
         if message.selector == "v3.asset.link":
             link = message.data.get("url", "")
             link_type = process_input.process_link(link)
-            cmd_output = self.run_scanner(link_type, link)
+            cmd_output = self.run_scanner(str(link_type), link)
         elif message.selector == "v3.asset.file":
-            cmd_output = process_input.process_file(
-                message.data.get("content", b"")
-            )
+            cmd_output = process_input.process_file(message.data.get("content", b""))
         elif message.selector == "v3.capture.logs":
-            cmd_output = process_input.process_file(
-                message.data.get("message", b"")
-            )
+            cmd_output = process_input.process_file(message.data.get("message", b""))
         elif message.selector == "v3.capture.request_response":
             response = message.data.get("response", {})
             cmd_output = process_input.process_file(response.get("body", b""))

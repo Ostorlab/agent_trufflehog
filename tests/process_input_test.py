@@ -2,7 +2,7 @@
 from agent import process_input
 
 
-def testProcessLink_Always_returnCorrectType():
+def testProcessLink_Always_returnCorrectType() -> None:
     github_links = [
         "https://github.com/user/repo.git",
         "http://github.com/Ostorlab/agent_trufflehog.git",
