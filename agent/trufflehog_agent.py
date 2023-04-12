@@ -82,7 +82,9 @@ class TruffleHogAgent(
             cmd_output = process_input.process_file(message.data.get("message", b""))
         elif message.selector == "v3.capture.request_response":
             response = message.data.get("response", {})
-            cmd_output = process_input.process_file(response.get("body", b""))
+            request = message.data.get("request", {})
+            content = response.get("body", b"") + b"\n" + request.get("body", b"")
+            cmd_output = process_input.process_file(content)
         else:
             raise ValueError(f"Unsuported selector {message.selector}.")
         if cmd_output is None:
