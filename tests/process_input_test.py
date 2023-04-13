@@ -19,7 +19,7 @@ from agent import process_input
         ),
     ],
 )
-def testProcessLink_Always_returnCorrectType(
+def testProcessLink_whenGit_returnsCorrectType(
     github_link: str, gitlab_link: str, other_link: str
 ) -> None:
     github_match = str(process_input.process_link(github_link))
