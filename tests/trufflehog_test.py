@@ -60,6 +60,7 @@ def testSubprocessParameter_whenProcessingFile_beValid(
     assert args[3] == "--only-verified"
     assert args[4] == "--json"
 
+
 def testSubprocessParameter_whenProcessingLogs_beValid(
     scan_message_logs: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
@@ -78,8 +79,9 @@ def testSubprocessParameter_whenProcessingLogs_beValid(
     assert args[3] == "--only-verified"
     assert args[4] == "--json"
 
+
 def testSubprocessParameter_whenProcessingRequestResponse_beValid(
-    scan_message_requestResponse: message.Message,
+    scan_message_request_response: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: Dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
@@ -87,7 +89,7 @@ def testSubprocessParameter_whenProcessingRequestResponse_beValid(
 ) -> None:
     magicMocker = mocker.patch("subprocess.check_output", return_value=b"")
 
-    trufflehog_agent_file.process(scan_message_requestResponse)
+    trufflehog_agent_file.process(scan_message_request_response)
     args = magicMocker.call_args[0][0]
 
     assert len(args) == 5

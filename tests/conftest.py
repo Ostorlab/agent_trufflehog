@@ -54,11 +54,15 @@ def scan_message_request_response() -> message.Message:
     """Creates a dummy message of type v3.asset.link to be used by the agent for testing purposes."""
     selector = "v3.capture.request_response"
     msg_data = {
-        "response": {"body":  b"Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum \
+        "response": {
+            "body": b"Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum \
             has been the industry's standard dummy text ever since the 1500s, when an unknown printer took \
-                a galley of type and scrambled it to make a type specimen book."},\
-        "request": {"body": b"It has survived not only five centuries, but also the leap into electronic \
-            typesetting, remaining essentially unchanged"},
+                a galley of type and scrambled it to make a type specimen book."
+        },
+        "request": {
+            "body": b"It has survived not only five centuries, but also the leap into electronic \
+            typesetting, remaining essentially unchanged"
+        },
     }
     return message.Message.from_data(selector, data=msg_data)
 
