@@ -22,6 +22,51 @@ def scan_message_file() -> message.Message:
     return message.Message.from_data(selector, data=msg_data)
 
 
+@pytest.fixture
+def scan_message_gihub_without_key() -> message.Message:
+    """Creates a dummy message of type v3.asset.link to be used by the agent for testing purposes."""
+    selector = "v3.asset.link"
+    msg_data = {"url": "https://github.com/trufflesecurity/test_keys.git"}
+    return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
+def scan_message_logs() -> message.Message:
+    """Creates a dummy message of type v3.capture.logs to be used by the agent for testing purposes."""
+    selector = "v3.capture.logs"
+    msg_data = {
+        "message": b"03/22 08:51:06 INFO   :.....mailslot_create: creating mailslot for RSVP\
+03/22 08:51:06 INFO   :....mailbox_register: mailbox allocated for rsvp\
+03/22 08:51:06 INFO   :.....mailslot_create: creating mailslot for RSVP via UDP\
+03/22 08:51:06 INFO   :....mailbox_register: mailbox allocated for rsvp-udp\
+03/22 08:51:06 TRACE  :..entity_initialize: interface 127.0.0.1, entity for rsvp allocated and initialized\
+03/22 08:51:06 INFO   :......mailslot_create: creating socket for querying route\
+03/22 08:51:06 INFO   :.....mailbox_register: no mailbox necessary for forward\
+03/22 08:51:06 INFO   :......mailslot_create: creating mailslot for route engine - informational socket\
+03/22 08:51:06 TRACE  :......mailslot_create: ready to accept informational socket connection\
+03/22 08:51:11 INFO   :.....mailbox_register: mailbox allocated for route"
+    }
+    return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
+def scan_message_request_response() -> message.Message:
+    """Creates a dummy message of type v3.asset.link to be used by the agent for testing purposes."""
+    selector = "v3.capture.request_response"
+    msg_data = {
+        "response": {
+            "body": b"Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum \
+            has been the industry's standard dummy text ever since the 1500s, when an unknown printer took \
+                a galley of type and scrambled it to make a type specimen book."
+        },
+        "request": {
+            "body": b"It has survived not only five centuries, but also the leap into electronic \
+            typesetting, remaining essentially unchanged"
+        },
+    }
+    return message.Message.from_data(selector, data=msg_data)
+
+
 @pytest.fixture()
 def trufflehog_agent_file(
     agent_persist_mock: Dict[str | bytes, str | bytes]

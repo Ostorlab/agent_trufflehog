@@ -1,6 +1,5 @@
 """Trufflehog agent."""
 import logging
-import tempfile
 import subprocess
 from typing import Any
 
@@ -12,7 +11,7 @@ from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from ostorlab.agent.message import message as m
 
 
-from agent import utils
+from agent import utils, process_input
 
 
 logging.basicConfig(
@@ -50,17 +49,20 @@ class TruffleHogAgent(
         secrets = utils.prune_reports(secrets)
         return secrets
 
-    def _run_scanner(self, input_file: str) -> bytes | None:
+    @staticmethod
+    def run_scanner(input_type: str, input_media: str) -> bytes | None:
         try:
             cmd_output = subprocess.check_output(
-                ["trufflehog", "filesystem", input_file, "--only-verified", "--json"]
+                ["trufflehog", input_type, input_media, "--only-verified", "--json"]
             )
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            logger.error("Error : %s", e)
             return None
         return cmd_output
 
     def process(self, message: m.Message) -> None:
-        """Runs the trufflehog tool ont the file/link recieved.
+        """
+        Runs the trufflehog tool ont the file/link recieved.
 
         Args:
             message: the message containing the trufflehog tool input file.
@@ -68,22 +70,29 @@ class TruffleHogAgent(
         Returns:
             None.
         """
-        logger.info("Processing input.")
+        logger.info("Processing input and Starting trufflehog.")
 
-        with tempfile.NamedTemporaryFile() as target_file:
-            target_file.write(message.data.get("content", b""))
-            target_file.seek(0)
-            input_media = target_file.name
+        if message.selector == "v3.asset.link":
+            link = message.data.get("url", "")
+            link_type = process_input.process_link(link)
+            cmd_output = self.run_scanner(str(link_type), link)
+        elif message.selector == "v3.asset.file":
+            cmd_output = process_input.process_file(message.data.get("content", b""))
+        elif message.selector == "v3.capture.logs":
+            cmd_output = process_input.process_file(message.data.get("message", b""))
+        elif message.selector == "v3.capture.request_response":
+            response = message.data.get("response", {})
+            request = message.data.get("request", {})
+            content = response.get("body", b"") + b"\n" + request.get("body", b"")
+            cmd_output = process_input.process_file(content)
+        else:
+            raise ValueError(f"Unsuported selector {message.selector}.")
+        if cmd_output is None:
+            return
 
-            logger.info("Starting trufflehog tool.")
+        logger.info("Parsing trufflehog output.")
 
-            cmd_output = self._run_scanner(input_media)
-            if cmd_output is None:
-                return
-
-            logger.info("Parsing trufflehog output.")
-
-            secrets = self._process_scanner_output(cmd_output)
+        secrets = self._process_scanner_output(cmd_output)
 
         logger.info("Reporting vulnerabilities.")
 
