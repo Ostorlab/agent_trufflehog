@@ -22,10 +22,10 @@ from agent import process_input
 def testProcessLink_whenGit_returnsCorrectType(
     github_link: str, gitlab_link: str, other_link: str
 ) -> None:
-    github_match = str(process_input.process_link(github_link))
-    gitlab_match = str(process_input.process_link(gitlab_link))
-    other_link = str(process_input.process_link(other_link))
+    github_match = process_input.get_link_type(github_link)
+    gitlab_match = process_input.get_link_type(gitlab_link)
+    other_link_match = process_input.get_link_type(other_link)
 
     assert github_match == "git"
     assert gitlab_match == "gitlab"
-    assert other_link == "None"
+    assert other_link_match is None

@@ -5,7 +5,7 @@ import re
 from agent import trufflehog_agent
 
 
-def process_link(link: str) -> str | None:
+def get_link_type(link: str) -> str | None:
     link_type: str
     if (
         re.search(

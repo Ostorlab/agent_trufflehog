@@ -36,9 +36,9 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
 
     assert len(agent_mock) == 1
     assert agent_mock[0].selector == "v3.report.vulnerability"
-    assert "https://********:********@the-internet.herokuapp.com" in str(
-        agent_mock[0].data.get("technical_detail")
-    )
+    technical_detail = agent_mock[0].data.get("technical_detail")
+    assert technical_detail is not None
+    assert "https://********:********@the-internet.herokuapp.com" in technical_detail
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
 
 
@@ -49,10 +49,12 @@ def testSubprocessParameter_whenProcessingFile_beValid(
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
-    magicMocker = mocker.patch("subprocess.check_output", return_value=b"")
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
 
     trufflehog_agent_file.process(scan_message_file)
-    args = magicMocker.call_args[0][0]
+    args = subprocess_check_output_mock.call_args[0][0]
 
     assert len(args) == 5
     assert args[0] == "trufflehog"
@@ -68,10 +70,12 @@ def testSubprocessParameter_whenProcessingLogs_beValid(
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
-    magicMocker = mocker.patch("subprocess.check_output", return_value=b"")
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
 
     trufflehog_agent_file.process(scan_message_logs)
-    args = magicMocker.call_args[0][0]
+    args = subprocess_check_output_mock.call_args[0][0]
 
     assert len(args) == 5
     assert args[0] == "trufflehog"
@@ -87,10 +91,12 @@ def testSubprocessParameter_whenProcessingRequestResponse_beValid(
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
-    magicMocker = mocker.patch("subprocess.check_output", return_value=b"")
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
 
     trufflehog_agent_file.process(scan_message_request_response)
-    args = magicMocker.call_args[0][0]
+    args = subprocess_check_output_mock.call_args[0][0]
 
     assert len(args) == 5
     assert args[0] == "trufflehog"
@@ -106,13 +112,34 @@ def testSubprocessParameter_whenProcessingLink_beValid(
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
-    magicMocker = mocker.patch("subprocess.check_output", return_value=b"")
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
 
     trufflehog_agent_file.process(scan_message_gihub_without_key)
-    args = magicMocker.call_args[0][0]
+    args = subprocess_check_output_mock.call_args[0][0]
 
     assert len(args) == 5
     assert args[0] == "trufflehog"
     assert args[1] == "git"
     assert args[3] == "--only-verified"
     assert args[4] == "--json"
+
+
+def testSubprocessParameter_whenProcessingInvalidGitLink_beValid(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: Dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Verifies that `run_scanner` method of `TruffleHogAgent` is not called when processing an invalid git link."""
+    subprocess_check_output_mock = mocker.patch(
+        "agent.trufflehog_agent.TruffleHogAgent.run_scanner", return_value=None
+    )
+    invalid_gi_link_message = message.Message.from_data(
+        selector="v3.asset.link",
+        data={"url": "https://mykillers.com/mykillers/will/not..."},
+    )
+    trufflehog_agent_file.process(invalid_gi_link_message)
+
+    assert subprocess_check_output_mock.call_count == 0
