@@ -4,28 +4,31 @@ import pytest
 from agent import process_input
 
 
+# (
+#     "",
+#     ,
+#     "",
+# ),
+# (
+#     ,
+#     ,
+#     ,
+# ),
 @pytest.mark.parametrize(
-    "github_link, gitlab_link, other_link",
+    "url, expected_type",
     [
-        (
-            "https://github.com/user/repo.git",
-            "https://gitlab.com/kalilinux/packages/trufflehog.git",
-            "http://www.example.com/",
-        ),
-        (
-            "http://github.com/Ostorlab/agent_trufflehog.git",
-            "http://gitlab.com/open-source-projects-lambda/cpython_mirror.git",
-            "http://www.example.edu/ball/box.html",
-        ),
+        ("https://github.com/Ostorlab/agent_trufflehog.git", "git"),
+        ("https://gitlab.com/kalilinux/packages/trufflehog.git", "gitlab"),
+        ("https://github.com/user/repo.git", "git"),
+        ("https://www.example.com/", None),
+        ("https://github.com/Ostorlab/agent_trufflehog.git", "git"),
+        ("https://gitlab.com/open-source-projects-lambda/cpython_mirror.git", "gitlab"),
+        ("https://www.example.edu/ball/box.html", None),
     ],
 )
-def testProcessLink_whenGit_returnsCorrectType(
-    github_link: str, gitlab_link: str, other_link: str
+def testProcessLink_alwyas_returnsCorrectType(
+    url: str,
+    expected_type: str | None,
 ) -> None:
-    github_match = process_input.get_link_type(github_link)
-    gitlab_match = process_input.get_link_type(gitlab_link)
-    other_link_match = process_input.get_link_type(other_link)
-
-    assert github_match == "git"
-    assert gitlab_match == "gitlab"
-    assert other_link_match is None
+    link_type = process_input.get_link_type(url)
+    assert link_type == expected_type
