@@ -35,7 +35,7 @@ def scan_message_logs() -> message.Message:
     """Creates a dummy message of type v3.capture.logs to be used by the agent for testing purposes."""
     selector = "v3.capture.logs"
     msg_data = {
-        "message": b"03/22 08:51:06 INFO   :.....mailslot_create: creating mailslot for RSVP\
+        "message": "03/22 08:51:06 INFO   :.....mailslot_create: creating mailslot for RSVP\
 03/22 08:51:06 INFO   :....mailbox_register: mailbox allocated for rsvp\
 03/22 08:51:06 INFO   :.....mailslot_create: creating mailslot for RSVP via UDP\
 03/22 08:51:06 INFO   :....mailbox_register: mailbox allocated for rsvp-udp\

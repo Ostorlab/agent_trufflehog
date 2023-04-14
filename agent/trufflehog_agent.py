@@ -3,16 +3,14 @@ import logging
 import subprocess
 from typing import Any
 
-from rich import logging as rich_logging
-from ostorlab.agent.mixins import agent_persist_mixin
 from ostorlab.agent import agent
 from ostorlab.agent.kb import kb
-from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from ostorlab.agent.message import message as m
-
+from ostorlab.agent.mixins import agent_persist_mixin
+from ostorlab.agent.mixins import agent_report_vulnerability_mixin
+from rich import logging as rich_logging
 
 from agent import utils, process_input
-
 
 logging.basicConfig(
     format="%(message)s",
@@ -79,7 +77,8 @@ class TruffleHogAgent(
         elif message.selector == "v3.asset.file":
             cmd_output = process_input.process_file(message.data.get("content", b""))
         elif message.selector == "v3.capture.logs":
-            cmd_output = process_input.process_file(message.data.get("message", b""))
+            content = message.data.get("message", "")
+            cmd_output = process_input.process_file(content.encode("utf-8"))
         elif message.selector == "v3.capture.request_response":
             response = message.data.get("response", {})
             request = message.data.get("request", {})
