@@ -4,16 +4,6 @@ import pytest
 from agent import process_input
 
 
-# (
-#     "",
-#     ,
-#     "",
-# ),
-# (
-#     ,
-#     ,
-#     ,
-# ),
 @pytest.mark.parametrize(
     "url, expected_type",
     [
