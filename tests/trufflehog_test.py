@@ -56,11 +56,10 @@ def testSubprocessParameter_whenProcessingFile_beValid(
     trufflehog_agent_file.process(scan_message_file)
     args = subprocess_check_output_mock.call_args[0][0]
 
-    assert len(args) == 5
+    assert len(args) == 4
     assert args[0] == "trufflehog"
     assert args[1] == "filesystem"
-    assert args[3] == "--only-verified"
-    assert args[4] == "--json"
+    assert args[3] == "--json"
 
 
 def testSubprocessParameter_whenProcessingLogs_beValid(
@@ -77,11 +76,10 @@ def testSubprocessParameter_whenProcessingLogs_beValid(
     trufflehog_agent_file.process(scan_message_logs)
     args = subprocess_check_output_mock.call_args[0][0]
 
-    assert len(args) == 5
+    assert len(args) == 4
     assert args[0] == "trufflehog"
     assert args[1] == "filesystem"
-    assert args[3] == "--only-verified"
-    assert args[4] == "--json"
+    assert args[3] == "--json"
 
 
 def testSubprocessParameter_whenProcessingRequestResponse_beValid(
@@ -98,11 +96,10 @@ def testSubprocessParameter_whenProcessingRequestResponse_beValid(
     trufflehog_agent_file.process(scan_message_request_response)
     args = subprocess_check_output_mock.call_args[0][0]
 
-    assert len(args) == 5
+    assert len(args) == 4
     assert args[0] == "trufflehog"
     assert args[1] == "filesystem"
-    assert args[3] == "--only-verified"
-    assert args[4] == "--json"
+    assert args[3] == "--json"
 
 
 def testSubprocessParameter_whenProcessingLink_beValid(
@@ -119,11 +116,10 @@ def testSubprocessParameter_whenProcessingLink_beValid(
     trufflehog_agent_file.process(scan_message_gihub_without_key)
     args = subprocess_check_output_mock.call_args[0][0]
 
-    assert len(args) == 5
+    assert len(args) == 4
     assert args[0] == "trufflehog"
     assert args[1] == "git"
-    assert args[3] == "--only-verified"
-    assert args[4] == "--json"
+    assert args[3] == "--json"
 
 
 def testSubprocessParameter_whenProcessingInvalidGitLink_beValid(
