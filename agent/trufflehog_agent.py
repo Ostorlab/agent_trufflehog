@@ -35,14 +35,12 @@ class TruffleHogAgent(
     """
 
     def _report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
-        if len(vulnz) > 0:
-            logger.info("Reporting vulnerabilities.")
         for vuln in vulnz:
             logger.info("Secret found : %s.", vuln["Redacted"])
             self.report_vulnerability(
                 entry=kb.KB.SECRETS_REVIEW,
                 risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH
-                if vuln["Verified"] == True
+                if vuln["Verified"] is True
                 else agent_report_vulnerability_mixin.RiskRating.POTENTIALLY,
                 technical_detail=f'Secret `{vuln["Redacted"]}` found in file `{message.data.get("path")}`',
             )

@@ -139,3 +139,33 @@ def testSubprocessParameter_whenProcessingInvalidGitLink_beValid(
     trufflehog_agent_file.process(invalid_gi_link_message)
 
     assert subprocess_check_output_mock.call_count == 0
+
+
+def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_returnWithRightRiskRating(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: Dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={"content": b"some file content"},
+    )
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"Verified":true,'
+        b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
+        b'"Redacted":"https://********:********@the-internet.herokuapp.com"}',
+    )
+    trufflehog_agent_file.process(msg)
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"Verified":false,'
+        b'"Raw":"plain_secret",'
+        b'"Redacted":"plain*secret"}',
+    )
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 2
+    assert agent_mock[0].data.get("risk_rating") == "HIGH"
+    assert agent_mock[1].data.get("risk_rating") == "POTENTIALLY"
