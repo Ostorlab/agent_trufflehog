@@ -87,7 +87,8 @@ class TruffleHogAgent(
             content = response.get("body", b"") + b"\n" + request.get("body", b"")
             cmd_output = process_input.process_file(content)
         else:
-            raise ValueError(f"Unsupported selector {message.selector}.")
+            logging.error(f"Unsupported selector {message.selector}.")
+            return
         if cmd_output is None:
             return
 
