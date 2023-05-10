@@ -70,6 +70,7 @@ class TruffleHogAgent(
         """
         logger.info("Processing input and Starting trufflehog.")
 
+        cmd_output = None
         if message.selector.startswith("v3.asset.link"):
             link = message.data.get("url", "")
             link_type = process_input.get_link_type(link)
