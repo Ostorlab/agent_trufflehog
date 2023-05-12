@@ -42,7 +42,7 @@ class TruffleHogAgent(
                 risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH
                 if vuln["Verified"] is True
                 else agent_report_vulnerability_mixin.RiskRating.POTENTIALLY,
-                technical_detail=f'Secret `{vuln["Redacted"]}` found in file `{message.data.get("path")}`',
+                technical_detail=f'Secret `{vuln.get("Raw")}` found in file `{message.data.get("path")}`',
             )
 
     def _process_scanner_output(self, output: bytes) -> list[dict[str, Any]]:
