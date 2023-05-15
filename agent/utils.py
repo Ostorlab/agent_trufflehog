@@ -35,3 +35,7 @@ def prune_reports(
             unique_reports.append(secret)
         dedup_set.add(secret["Raw"])
     return unique_reports
+
+
+def escape_backtick(text):
+    return text.replace("`", r"\`")
