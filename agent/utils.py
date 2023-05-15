@@ -37,5 +37,5 @@ def prune_reports(
     return unique_reports
 
 
-def escape_backtick(text):
+def escape_backtick(text: str) -> str:
     return text.replace("`", r"\`")

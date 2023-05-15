@@ -37,6 +37,9 @@ class TruffleHogAgent(
     def _report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
         for vuln in vulnz:
             secret_token = vuln.get("Raw") or vuln.get("Redacted")
+            if secret_token is None:
+                logger.error("trying vuln with secret %s", vuln)
+                continue
             secret_token = utils.escape_backtick(secret_token)
             logger.info("Secret found : %s.", vuln["Redacted"])
             self.report_vulnerability(
