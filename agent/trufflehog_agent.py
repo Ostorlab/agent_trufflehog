@@ -38,7 +38,8 @@ class TruffleHogAgent(
         for vuln in vulnz:
             secret_token = vuln.get("Raw") or vuln.get("Redacted")
             if secret_token is None:
-                logger.error("trying vuln with secret %s", vuln)
+                logger.error("t
+Traying to emit vulnerability with no secret.  %s", vuln)
                 continue
             secret_token = utils.escape_backtick(secret_token)
             logger.info("Secret found : %s.", vuln["Redacted"])
