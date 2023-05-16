@@ -31,7 +31,7 @@ class TruffleHogAgent(
 ):
     """
     This class represents TruffleHog agent.
-    this class uses the TruffleHog tool to scan files for secrests.
+    this class uses the TruffleHog tool to scan files for secrets.
     """
 
     def _report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
@@ -62,7 +62,7 @@ class TruffleHogAgent(
 
     def process(self, message: m.Message) -> None:
         """
-        Runs the trufflehog tool ont the file/link recieved.
+        Runs the trufflehog tool ont the file/link received.
 
         Args:
             message: the message containing the trufflehog tool input file.
