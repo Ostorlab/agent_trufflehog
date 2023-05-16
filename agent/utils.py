@@ -35,3 +35,14 @@ def prune_reports(
             unique_reports.append(secret)
         dedup_set.add(secret["Raw"])
     return unique_reports
+
+
+def escape_backtick(text: str) -> str:
+    """Escapes backticks in the given text.
+    Replaces each occurrence of a backtick (`) in the input text with a backslash followed by a backtick (\\`).
+    Args:
+        text: The input text containing backticks.
+    Returns:
+        The modified text with backticks escaped.
+    """
+    return text.replace("`", r"\`")

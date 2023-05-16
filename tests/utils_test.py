@@ -95,3 +95,8 @@ def testPruneReports_always_dedupCorrectly() -> None:
     deduped_list = utils.prune_reports(dups_list)
 
     assert len(deduped_list) == 2
+
+
+def testEscapeBacktick_always_returnExpectedText() -> None:
+    token_with_backtick = "SomeSecret`super`"
+    assert utils.escape_backtick(token_with_backtick) == "SomeSecret\\`super\\`"
