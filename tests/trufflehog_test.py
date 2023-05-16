@@ -141,7 +141,7 @@ def testSubprocessParameter_whenProcessingInvalidGitLink_beValid(
     assert subprocess_check_output_mock.call_count == 0
 
 
-def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVerified(
+def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVerifiedVulns(
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: Dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
