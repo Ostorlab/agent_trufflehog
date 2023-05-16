@@ -141,7 +141,7 @@ def testSubprocessParameter_whenProcessingInvalidGitLink_beValid(
     assert subprocess_check_output_mock.call_count == 0
 
 
-def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_returnWithRightRiskRating(
+def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVerified(
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: Dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
@@ -149,7 +149,7 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_returnWithRightRis
 ) -> None:
     msg = message.Message.from_data(
         selector="v3.asset.file",
-        data={"content": b"some file content"},
+        data={"content": b"some file content", "path": "magic_is_real.js"},
     )
     mocker.patch(
         "subprocess.check_output",
@@ -166,6 +166,10 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_returnWithRightRis
     )
     trufflehog_agent_file.process(msg)
 
-    assert len(agent_mock) == 2
+    assert len(agent_mock) == 1
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
-    assert agent_mock[1].data.get("risk_rating") == "POTENTIALLY"
+    assert "Secret `https://admin:admin@the-internet.herokuapp.com` found in file `magic_is_real.js`" == agent_mock[
+        0
+    ].data.get(
+        "technical_detail"
+    )

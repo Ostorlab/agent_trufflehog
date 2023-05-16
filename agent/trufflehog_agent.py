@@ -10,8 +10,8 @@ from ostorlab.agent.mixins import agent_persist_mixin
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from rich import logging as rich_logging
 
-from agent import utils
 from agent import process_input
+from agent import utils
 
 logging.basicConfig(
     format="%(message)s",
@@ -37,13 +37,12 @@ class TruffleHogAgent(
     def _report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
         for vuln in vulnz:
             logger.info("Secret found : %s.", vuln["Redacted"])
-            self.report_vulnerability(
-                entry=kb.KB.SECRETS_REVIEW,
-                risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH
-                if vuln["Verified"] is True
-                else agent_report_vulnerability_mixin.RiskRating.POTENTIALLY,
-                technical_detail=f'Secret `{vuln.get("Raw")}` found in file `{message.data.get("path")}`',
-            )
+            if vuln.get("Verified") is True:
+                self.report_vulnerability(
+                    entry=kb.KB.SECRETS_REVIEW,
+                    risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH,
+                    technical_detail=f'Secret `{vuln.get("Raw")}` found in file `{message.data.get("path")}`',
+                )
 
     def _process_scanner_output(self, output: bytes) -> list[dict[str, Any]]:
         secrets = utils.load_newline_json(output)
