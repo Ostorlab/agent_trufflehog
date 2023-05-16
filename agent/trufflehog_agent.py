@@ -38,8 +38,7 @@ class TruffleHogAgent(
         for vuln in vulnz:
             secret_token = vuln.get("Raw") or vuln.get("Redacted")
             if secret_token is None:
-                logger.error("t
-Traying to emit vulnerability with no secret.  %s", vuln)
+                logger.error("Trying to emit a vulnerability with no secret: %s", vuln)
                 continue
             secret_token = utils.escape_backtick(secret_token)
             logger.info("Secret found : %s.", vuln["Redacted"])
@@ -69,7 +68,7 @@ Traying to emit vulnerability with no secret.  %s", vuln)
 
     def process(self, message: m.Message) -> None:
         """
-        Runs the trufflehog tool ont the file/link recieved.
+        Runs the trufflehog tool ont the file/link received.
 
         Args:
             message: the message containing the trufflehog tool input file.
