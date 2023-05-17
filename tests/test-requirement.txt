@@ -2,3 +2,5 @@ pylint
 pylint-quotes
 pytest
 pytest-mock
+mypy
+typing-extensions
