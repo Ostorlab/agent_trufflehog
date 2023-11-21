@@ -38,7 +38,10 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     assert agent_mock[0].selector == "v3.report.vulnerability"
     technical_detail = agent_mock[0].data.get("technical_detail")
     assert technical_detail is not None
-    assert "https://admin:admin@the-internet.herokuapp.com" in technical_detail
+    assert (
+        "Secret `https://admin:admin@the-internet.herokuapp.com` of type `URI` found"
+        in technical_detail
+    )
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
 
 
@@ -168,7 +171,7 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVe
 
     assert len(agent_mock) == 1
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
-    assert "Secret `https://admin:admin@the-internet.herokuapp.com` found in file `magic_is_real.js`" == agent_mock[
+    assert "Secret `https://admin:admin@the-internet.herokuapp.com` found in file `magic_is_real.js`." == agent_mock[
         0
     ].data.get(
         "technical_detail"

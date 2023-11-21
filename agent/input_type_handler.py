@@ -1,10 +1,6 @@
 """Module that provides functions to handle specific input selectors."""
 
-import tempfile
 import re
-
-
-from agent import trufflehog_agent
 
 
 def get_link_type(link: str) -> str | None:
@@ -28,14 +24,3 @@ def get_link_type(link: str) -> str | None:
     else:
         return None
     return link_type
-
-
-def process_file(content: bytes) -> bytes | None:
-    with tempfile.NamedTemporaryFile() as target_file:
-        target_file.write(content)
-        target_file.seek(0)
-        input_file = target_file.name
-        cmd_output = trufflehog_agent.TruffleHogAgent.run_scanner(
-            "filesystem", input_file
-        )
-    return cmd_output

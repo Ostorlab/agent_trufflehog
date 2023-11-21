@@ -1,6 +1,7 @@
 """Trufflehog agent."""
 import logging
 import subprocess
+import tempfile
 from typing import Any
 
 from ostorlab.agent import agent
@@ -10,7 +11,7 @@ from ostorlab.agent.mixins import agent_persist_mixin
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from rich import logging as rich_logging
 
-from agent import process_input
+from agent import input_type_handler
 from agent import utils
 
 logging.basicConfig(
@@ -42,11 +43,16 @@ class TruffleHogAgent(
                 continue
             secret_token = utils.escape_backtick(secret_token)
             logger.info("Secret found : %s.", vuln["Redacted"])
+            technical_detail = f"""Secret `{secret_token}` """
+            secret_type = vuln.get("DetectorName")
+            if secret_type is not None:
+                technical_detail += f"""of type `{secret_type}` """
+            technical_detail += f"""found in file `{message.data.get("path")}`."""
             if vuln.get("Verified") is True:
                 self.report_vulnerability(
                     entry=kb.KB.SECRETS_REVIEW,
                     risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH,
-                    technical_detail=f'Secret `{secret_token}` found in file `{message.data.get("path")}`',
+                    technical_detail=technical_detail,
                 )
 
     def _process_scanner_output(self, output: bytes) -> list[dict[str, Any]]:
@@ -80,20 +86,20 @@ class TruffleHogAgent(
         cmd_output = None
         if message.selector.startswith("v3.asset.link"):
             link = message.data.get("url", "")
-            link_type = process_input.get_link_type(link)
+            link_type = input_type_handler.get_link_type(link)
             if link_type is None:
                 return
             cmd_output = self.run_scanner(link_type, link)
         elif message.selector.startswith("v3.asset.file"):
-            cmd_output = process_input.process_file(message.data.get("content", b""))
+            cmd_output = process_file(message.data.get("content", b""))
         elif message.selector.startswith("v3.capture.logs"):
             content = message.data.get("message", "")
-            cmd_output = process_input.process_file(content.encode("utf-8"))
+            cmd_output = process_file(content.encode("utf-8"))
         elif message.selector.startswith("v3.capture.request_response"):
             response = message.data.get("response", {})
             request = message.data.get("request", {})
             content = response.get("body", b"") + b"\n" + request.get("body", b"")
-            cmd_output = process_input.process_file(content)
+            cmd_output = process_file(content)
         if cmd_output is None:
             return
 
@@ -102,6 +108,15 @@ class TruffleHogAgent(
         secrets = self._process_scanner_output(cmd_output)
 
         self._report_vulnz(secrets, message)
+
+
+def process_file(content: bytes) -> bytes | None:
+    with tempfile.NamedTemporaryFile() as target_file:
+        target_file.write(content)
+        target_file.seek(0)
+        input_file = target_file.name
+        cmd_output = TruffleHogAgent.run_scanner("filesystem", input_file)
+    return cmd_output
 
 
 if __name__ == "__main__":
