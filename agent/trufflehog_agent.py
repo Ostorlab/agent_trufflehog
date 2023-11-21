@@ -47,7 +47,7 @@ class TruffleHogAgent(
             secret_type = vuln.get("DetectorName")
             if secret_type is not None:
                 technical_detail += f"""of type `{secret_type}` """
-            technical_detail += f"""found in file `{message.data.get("path")}`"""
+            technical_detail += f"""found in file `{message.data.get("path")}`."""
             if vuln.get("Verified") is True:
                 self.report_vulnerability(
                     entry=kb.KB.SECRETS_REVIEW,
