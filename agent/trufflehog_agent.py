@@ -42,13 +42,11 @@ class TruffleHogAgent(
                 continue
             secret_token = utils.escape_backtick(secret_token)
             logger.info("Secret found : %s.", vuln["Redacted"])
-
-            technical_detail = f"""Secret `{secret_token}` found in file `{message.data.get("path")}`"""
+            technical_detail = f"""Secret `{secret_token}` """
             secret_type = vuln.get("DetectorName")
             if secret_type is not None:
-                technical_detail = \
-                    f"""Secret `{secret_token}` of type `{secret_type}` found in file `{message.data.get("path")}`"""
-
+                technical_detail += f"""of type `{secret_type}` """
+            technical_detail += f"""found in file `{message.data.get("path")}`"""
             if vuln.get("Verified") is True:
                 self.report_vulnerability(
                     entry=kb.KB.SECRETS_REVIEW,
