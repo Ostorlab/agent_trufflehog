@@ -171,7 +171,7 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVe
 
     assert len(agent_mock) == 1
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
-    assert "Secret `https://admin:admin@the-internet.herokuapp.com` found in file `magic_is_real.js`" == agent_mock[
+    assert "Secret `https://admin:admin@the-internet.herokuapp.com` found in file `magic_is_real.js`." == agent_mock[
         0
     ].data.get(
         "technical_detail"
