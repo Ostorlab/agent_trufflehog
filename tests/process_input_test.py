@@ -1,7 +1,7 @@
-"""Tests for the process_input Module."""
+"""Tests for the input_type_handler Module."""
 import pytest
 
-from agent import process_input
+from agent import input_type_handler
 
 
 @pytest.mark.parametrize(
@@ -20,5 +20,5 @@ def testProcessLink_alwyas_returnsCorrectType(
     url: str,
     expected_type: str | None,
 ) -> None:
-    link_type = process_input.get_link_type(url)
+    link_type = input_type_handler.get_link_type(url)
     assert link_type == expected_type
