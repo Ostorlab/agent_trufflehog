@@ -69,7 +69,7 @@ def scan_message_request_response() -> message.Message:
 
 @pytest.fixture()
 def trufflehog_agent_file(
-    agent_persist_mock: Dict[str | bytes, str | bytes]
+    agent_persist_mock: Dict[str | bytes, str | bytes],
 ) -> trufflehog_agent.TruffleHogAgent:
     with (pathlib.Path(__file__).parent.parent / "ostorlab.yaml").open() as yaml_o:
         definition = agent_definitions.AgentDefinition.from_yaml(yaml_o)
