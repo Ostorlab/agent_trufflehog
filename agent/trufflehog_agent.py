@@ -25,6 +25,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _process_file(content: bytes) -> bytes | None:
+    with tempfile.NamedTemporaryFile() as target_file:
+        target_file.write(content)
+        target_file.seek(0)
+        input_file = target_file.name
+        cmd_output = TruffleHogAgent.run_scanner("filesystem", input_file)
+    return cmd_output
+
+
 class TruffleHogAgent(
     agent.Agent,
     agent_persist_mixin.AgentPersistMixin,
@@ -91,15 +100,15 @@ class TruffleHogAgent(
                 return
             cmd_output = self.run_scanner(link_type, link)
         elif message.selector.startswith("v3.asset.file"):
-            cmd_output = process_file(message.data.get("content", b""))
+            cmd_output = _process_file(message.data.get("content", b""))
         elif message.selector.startswith("v3.capture.logs"):
             content = message.data.get("message", "")
-            cmd_output = process_file(content.encode("utf-8"))
+            cmd_output = _process_file(content.encode("utf-8"))
         elif message.selector.startswith("v3.capture.request_response"):
             response = message.data.get("response", {})
             request = message.data.get("request", {})
             content = response.get("body", b"") + b"\n" + request.get("body", b"")
-            cmd_output = process_file(content)
+            cmd_output = _process_file(content)
         if cmd_output is None:
             return
 
@@ -108,15 +117,6 @@ class TruffleHogAgent(
         secrets = self._process_scanner_output(cmd_output)
 
         self._report_vulnz(secrets, message)
-
-
-def process_file(content: bytes) -> bytes | None:
-    with tempfile.NamedTemporaryFile() as target_file:
-        target_file.write(content)
-        target_file.seek(0)
-        input_file = target_file.name
-        cmd_output = TruffleHogAgent.run_scanner("filesystem", input_file)
-    return cmd_output
 
 
 if __name__ == "__main__":
