@@ -1,4 +1,5 @@
 """Helper functions for the Trufflehog agent"""
+
 import json
 from typing import Any
 
