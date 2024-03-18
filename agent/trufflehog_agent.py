@@ -1,4 +1,5 @@
 """Trufflehog agent."""
+
 import logging
 import subprocess
 import tempfile

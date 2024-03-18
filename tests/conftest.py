@@ -1,5 +1,5 @@
 """
-    conftest for trufflehog agent tests
+conftest for trufflehog agent tests
 """
 
 import pytest

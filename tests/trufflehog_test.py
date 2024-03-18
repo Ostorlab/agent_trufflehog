@@ -1,4 +1,5 @@
 """Unittest for truflehog agent."""
+
 from typing import Dict
 
 from ostorlab.agent.message import message

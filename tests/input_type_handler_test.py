@@ -1,4 +1,5 @@
 """Tests for the input_type_handler Module."""
+
 import pytest
 
 from agent import input_type_handler
