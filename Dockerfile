@@ -18,6 +18,7 @@ COPY --from=builder /install /usr/local
 COPY --from=scanner /install/trufflehog/trufflehog /usr/local/bin/trufflehog
 # Trufflehog agent uses git for the GitHub repo scanning.
 RUN apk add git
+RUN apk add libmagic
 RUN mkdir -p /app/agent
 ENV PYTHONPATH=/app
 COPY agent /app/agent
