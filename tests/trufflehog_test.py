@@ -178,12 +178,13 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVe
     )
 
 
-def testSubprocessParameter_whenProcessingFile_beValid(
+def testAgent_whenFileTypeIsUnrelated_skipIt(
     apk_message_file: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
+    """test that unrelated files are skipped."""
     subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
 
     trufflehog_agent_file.process(apk_message_file)
