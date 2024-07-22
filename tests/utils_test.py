@@ -1,5 +1,7 @@
 """Unittest for helper funstions"""
 
+import pytest
+
 from agent import utils
 
 
@@ -100,3 +102,40 @@ def testPruneReports_always_dedupCorrectly() -> None:
 def testEscapeBacktick_always_returnExpectedText() -> None:
     token_with_backtick = "SomeSecret`super`"
     assert utils.escape_backtick(token_with_backtick) == "SomeSecret\\`super\\`"
+
+
+@pytest.mark.parametrize(
+    "path,content,type",
+    [
+        (
+            "some/path.jpg",
+            b"\xff\xd8\xff\xe0\x00\x10\x4a\x46\x49\x46\x00\x01\x01\x01\x00\x60",
+            "image",
+        ),
+        (
+            "some/path.plist",
+            b"bplist00\xd1\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f",
+            "binary_plist",
+        ),
+        (
+            "some/otherpath.plist",
+            b'<?xml version="1.0" encoding="UTF-8"?>\n',
+            "xml_plist",
+        ),
+        ("some/path.js", b"", "js"),
+        ("some/path.html", b"", "html"),
+        ("some/path.dll", b"", "dll"),
+        ("some/path.xml", b"", "xml"),
+        ("some/path.json", b"", "json"),
+        ("some/path.css", b"", "css"),
+        ("some/path.apk", b"", "apk"),
+        ("some/path.ipa", b"", "ipa"),
+        ("some/path.xapk", b"", "xapk"),
+        ("some/path.font", b"\x77\x4f\x46\x32", "font"),
+        ("some/path.stuff", b"", "unknown"),
+    ],
+)
+def testGetFileType_always_detectTheCorrectType(
+    path: str, content: bytes, type: str
+) -> None:
+    assert utils.get_file_type(path, content) == type

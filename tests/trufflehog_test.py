@@ -176,3 +176,17 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVe
         "Secret `https://admin:admin@the-internet.herokuapp.com` found in file `magic_is_real.js`."
         == agent_mock[0].data.get("technical_detail")
     )
+
+
+def testSubprocessParameter_whenProcessingFile_beValid(
+    apk_message_file: message.Message,
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
+
+    trufflehog_agent_file.process(apk_message_file)
+
+    assert len(agent_mock) == 0
+    assert subprocess_mock.call_count == 0

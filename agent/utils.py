@@ -3,6 +3,8 @@
 import json
 from typing import Any
 
+import magic
+
 
 def load_newline_json(byte_data: bytes) -> list[dict[str, Any]]:
     """Convertes bytes to a list of dictionaries.
@@ -47,3 +49,56 @@ def escape_backtick(text: str) -> str:
         The modified text with backticks escaped.
     """
     return text.replace("`", r"\`")
+
+
+def get_file_type(filename: str, file_content: bytes) -> str:
+    """Method responsible for getting the file type.
+    Args:
+        filename: Name of the file.
+        file_content: Content of the file.
+    Returns:
+        File type as a string.
+    """
+    magic_type = magic.from_buffer(file_content)
+    magic_mime_type = magic.from_buffer(file_content, mime=True)
+    if (
+        magic_type == "Android binary XML"
+        and filename.endswith("AndroidManifest.xml") is True
+    ):
+        return "android_manifest"
+    if magic_type == "Android binary XML":
+        return "android_binary_xml"
+    if filename.endswith(".js") or filename.endswith(".jsbundle"):
+        return "js"
+    if filename.endswith(".html"):
+        return "html"
+    if filename.endswith(".dll"):
+        return "dll"
+    if filename == "resources.arsc" and magic_mime_type == "application/octet-stream":
+        return "android_resource"
+    if (
+        magic_type
+        == "PE32 executable (DLL) (console) Intel 80386 Mono/.Net assembly, for MS Windows"
+    ):
+        return "dotnet_dll"
+    if filename.endswith(".plist") and magic_type == "Apple binary property list":
+        return "binary_plist"
+    if filename.endswith(".plist") and magic_type.startswith("XML"):
+        return "xml_plist"
+    if filename.endswith(".xml"):
+        return "xml"
+    if magic_mime_type.startswith("image/"):
+        return "image"
+    if filename.endswith(".json"):
+        return "json"
+    if magic_mime_type.startswith("font/") or "Font Format" in magic_type:
+        return "font"
+    if filename.endswith(".css"):
+        return "css"
+    if filename.endswith(".apk"):
+        return "apk"
+    if filename.endswith(".ipa"):
+        return "ipa"
+    if filename.endswith(".xapk"):
+        return "xapk"
+    return "unknown"
