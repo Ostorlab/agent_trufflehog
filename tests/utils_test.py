@@ -122,6 +122,9 @@ def testEscapeBacktick_always_returnExpectedText() -> None:
             b'<?xml version="1.0" encoding="UTF-8"?>\n',
             "xml_plist",
         ),
+        ("AndroidManifest.xml", b"\x03\x00\x08\x00", "android_manifest"),
+        ("some/path.xml", b"\x03\x00\x08\x00", "android_binary_xml"),
+        ("some/path.font", b"\x77\x4f\x46\x32", "font"),
         ("some/path.js", b"", "js"),
         ("some/path.html", b"", "html"),
         ("some/path.dll", b"", "dll"),
@@ -131,7 +134,6 @@ def testEscapeBacktick_always_returnExpectedText() -> None:
         ("some/path.apk", b"", "apk"),
         ("some/path.ipa", b"", "ipa"),
         ("some/path.xapk", b"", "xapk"),
-        ("some/path.font", b"\x77\x4f\x46\x32", "font"),
         ("some/path.stuff", b"", "unknown"),
     ],
 )

@@ -74,13 +74,6 @@ def get_file_type(filename: str, file_content: bytes) -> str:
         return "html"
     if filename.endswith(".dll"):
         return "dll"
-    if filename == "resources.arsc" and magic_mime_type == "application/octet-stream":
-        return "android_resource"
-    if (
-        magic_type
-        == "PE32 executable (DLL) (console) Intel 80386 Mono/.Net assembly, for MS Windows"
-    ):
-        return "dotnet_dll"
     if filename.endswith(".plist") and magic_type == "Apple binary property list":
         return "binary_plist"
     if filename.endswith(".plist") and magic_type.startswith("XML"):
