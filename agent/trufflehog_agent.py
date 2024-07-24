@@ -15,6 +15,8 @@ from rich import logging as rich_logging
 from agent import input_type_handler
 from agent import utils
 
+BLACKLISTED_FILE_TYPES = ["image", "apple_image", "font", "css", "apk", "xapk", "ipa"]
+
 logging.basicConfig(
     format="%(message)s",
     datefmt="[%X]",
@@ -101,7 +103,15 @@ class TruffleHogAgent(
                 return
             cmd_output = self.run_scanner(link_type, link)
         elif message.selector.startswith("v3.asset.file"):
-            cmd_output = _process_file(message.data.get("content", b""))
+            path = message.data.get("path", "")
+            content = message.data.get("content", b"")
+            file_type = utils.get_file_type(filename=path, file_content=content)
+            if file_type in BLACKLISTED_FILE_TYPES:
+                logger.info(
+                    "Skipping file %s with blacklisted type %s", path, file_type
+                )
+                return
+            cmd_output = _process_file(content)
         elif message.selector.startswith("v3.capture.logs"):
             content = message.data.get("message", "")
             cmd_output = _process_file(content.encode("utf-8"))

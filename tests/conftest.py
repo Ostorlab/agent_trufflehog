@@ -83,3 +83,12 @@ def trufflehog_agent_file(
         )
         agent_object = trufflehog_agent.TruffleHogAgent(definition, settings)
     return agent_object
+
+
+@pytest.fixture
+def apk_message_file() -> message.Message:
+    """Creates a dummy message of type v3.asset.file that wraps an apk file."""
+    selector = "v3.asset.file"
+    with open("./tests/files/fake.apk", "rb") as infile:
+        msg_data = {"content": infile.read(), "path": "tests/files/fake.apk"}
+    return message.Message.from_data(selector, data=msg_data)
