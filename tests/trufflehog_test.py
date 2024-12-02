@@ -1,8 +1,9 @@
 """Unittest for truflehog agent."""
 
-from typing import Dict
 import logging
+from typing import Dict
 
+import pytest
 from ostorlab.agent.message import message
 from pytest_mock import plugin
 
@@ -200,7 +201,7 @@ def testTrufflehog_whenProcessingSecrets_shouldLogNonCriticalMessagesAtDebugLeve
     agent_persist_mock: Dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
-    caplog,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Tests that non-critical messages are logged at debug level."""
 
