@@ -93,7 +93,7 @@ class TruffleHogAgent(
         Returns:
             None.
         """
-        logger.info("Processing input and Starting trufflehog.")
+        logger.debug("Processing input and Starting trufflehog.")
 
         cmd_output = None
         if message.selector.startswith("v3.asset.link"):
@@ -123,7 +123,7 @@ class TruffleHogAgent(
         if cmd_output is None:
             return
 
-        logger.info("Parsing trufflehog output.")
+        logger.debug("Parsing trufflehog output.")
 
         secrets = self._process_scanner_output(cmd_output)
 
