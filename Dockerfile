@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine as scanner
+FROM golang:1.23-alpine as scanner
 RUN mkdir /install
 WORKDIR /install
 RUN apk add git
