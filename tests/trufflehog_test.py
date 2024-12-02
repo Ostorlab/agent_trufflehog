@@ -202,7 +202,7 @@ def testTrufflehog_whenProcessingSecrets_shouldLogNonCriticalMessagesAtDebugLeve
     agent_mock: list[message.Message],
     caplog,
 ) -> None:
-    """Tests running the agent on a file and parsing the json output."""
+    """Tests that non-critical messages are logged at debug level."""
 
     mocker.patch(
         "subprocess.check_output",
