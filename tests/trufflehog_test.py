@@ -1,6 +1,7 @@
 """Unittest for truflehog agent."""
 
 from typing import Dict
+import logging
 
 from ostorlab.agent.message import message
 from pytest_mock import plugin
@@ -191,3 +192,40 @@ def testAgent_whenFileTypeIsUnrelated_skipIt(
 
     assert len(agent_mock) == 0
     assert subprocess_mock.call_count == 0
+
+
+def testTrufflehog_whenProcessingSecrets_shouldLogNonCriticalMessagesAtDebugLeve(
+    scan_message_file: message.Message,
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: Dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    caplog,
+) -> None:
+    """Tests running the agent on a file and parsing the json output."""
+
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"SourceMetadata":{"Data":{"Git":{"commit":"77b2a3e56973785a52ba4ae4b8dac61d4bac016f",'
+        b'"file":"keys","email":"counter 003ccounter@counters-MacBook-Air.local003e",'
+        b'"repository":"https://github.com/trufflesecurity/test_keys","timestamp":"2022-06-16 10:27:56 -0700"'
+        b',"line":3}}},"SourceID":0,"SourceType":16,"SourceName":"trufflehog - git","DetectorType":17,'
+        b'"DetectorName":"URI","DecoderName":"BASE64","Verified":true,'
+        b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
+        b'"Redacted":"https://********:********@the-internet.herokuapp.com",'
+        b'"ExtraData":null,"StructuredData":null}',
+    )
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={"content": b"some file content"},
+    )
+    logging.getLogger().setLevel(logging.DEBUG)
+
+    trufflehog_agent_file.process(msg)
+
+    for record in caplog.records:
+        if (
+            "Processing input and Starting trufflehog." in record.message
+            or "Parsing trufflehog output." in record.message
+        ):
+            assert record.levelname == "DEBUG"
