@@ -44,7 +44,9 @@ def _prepare_vulnerability_location(
     message: m.Message,
     file_path: str,
 ) -> vuln_mixin.VulnerabilityLocation | None:
-    """Prepare a `VulnerabilityLocation` instance with iOS asset & its Bundle ID, with file path as vulnerability metadata."""
+    """Prepare a `VulnerabilityLocation` instance with file path as vulnerability metadata and
+    iOS/Android asset & their respective bundle-ID/package name as asset metadata.
+    """
     package_name = message.data.get("android_metadata", {}).get("package_name")
     bundle_id = message.data.get("ios_metadata", {}).get("bundle_id")
     if bundle_id is None and package_name is None:
