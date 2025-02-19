@@ -9,8 +9,11 @@ from ostorlab.agent import agent
 from ostorlab.agent.kb import kb
 from ostorlab.agent.message import message as m
 from ostorlab.agent.mixins import agent_persist_mixin
-from ostorlab.agent.mixins import agent_report_vulnerability_mixin
+from ostorlab.agent.mixins import agent_report_vulnerability_mixin as vuln_mixin
 from rich import logging as rich_logging
+from ostorlab.assets import asset as os_asset
+from ostorlab.assets import ios_store
+from ostorlab.assets import android_store
 
 from agent import input_type_handler
 from agent import utils
@@ -37,10 +40,36 @@ def _process_file(content: bytes) -> bytes | None:
     return cmd_output
 
 
+def _prepare_vulnerability_location(
+    message: m.Message,
+    file_path: str,
+) -> vuln_mixin.VulnerabilityLocation | None:
+    """Prepare a `VulnerabilityLocation` instance with iOS asset & its Bundle ID, with file path as vulnerability metadata."""
+    package_name = message.data.get("android_metadata", {}).get("package_name")
+    bundle_id = message.data.get("ios_metadata", {}).get("bundle_id")
+    if bundle_id is None and package_name is None:
+        return None
+    asset: os_asset.Asset | None = None
+    if bundle_id is not None:
+        asset = ios_store.IOSStore(bundle_id=bundle_id)
+    if package_name is not None:
+        asset = android_store.AndroidStore(package_name=package_name)
+
+    return vuln_mixin.VulnerabilityLocation(
+        asset=asset,
+        metadata=[
+            vuln_mixin.VulnerabilityLocationMetadata(
+                metadata_type=vuln_mixin.MetadataType.FILE_PATH,
+                value=file_path,
+            )
+        ],
+    )
+
+
 class TruffleHogAgent(
     agent.Agent,
     agent_persist_mixin.AgentPersistMixin,
-    agent_report_vulnerability_mixin.AgentReportVulnMixin,
+    vuln_mixin.AgentReportVulnMixin,
 ):
     """
     This class represents TruffleHog agent.
@@ -59,12 +88,21 @@ class TruffleHogAgent(
             secret_type = vuln.get("DetectorName")
             if secret_type is not None:
                 technical_detail += f"""of type `{secret_type}` """
-            technical_detail += f"""found in file `{message.data.get("path")}`."""
+            vulnerability_location = None
+            path = message.data.get("path")
+
+            if path is not None:
+                technical_detail += f"""found in file `{path}`."""
+                vulnerability_location = _prepare_vulnerability_location(
+                    message=message, file_path=path
+                )
+
             if vuln.get("Verified") is True:
                 self.report_vulnerability(
                     entry=kb.KB.SECRETS_REVIEW,
-                    risk_rating=agent_report_vulnerability_mixin.RiskRating.HIGH,
+                    risk_rating=vuln_mixin.RiskRating.HIGH,
                     technical_detail=technical_detail,
+                    vulnerability_location=vulnerability_location,
                 )
 
     def _process_scanner_output(self, output: bytes) -> list[dict[str, Any]]:
