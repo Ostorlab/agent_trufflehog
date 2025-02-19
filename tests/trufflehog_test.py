@@ -1,7 +1,6 @@
 """Unittest for truflehog agent."""
 
 import logging
-from typing import Dict
 
 import pytest
 from ostorlab.agent.message import message
@@ -11,9 +10,8 @@ from agent import trufflehog_agent
 
 
 def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
-    scan_message_file: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
@@ -32,26 +30,40 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     )
     msg = message.Message.from_data(
         selector="v3.asset.file",
-        data={"content": b"some file content"},
+        data={
+            "content": b"some file content",
+            "path": "/tmp/path/file.txt",
+            "android_metadata": {"package_name": "a.b.c"},
+        },
     )
 
     trufflehog_agent_file.process(msg)
 
     assert len(agent_mock) == 1
     assert agent_mock[0].selector == "v3.report.vulnerability"
-    technical_detail = agent_mock[0].data.get("technical_detail")
-    assert technical_detail is not None
+    vulnerability = agent_mock[0].data
+    assert vulnerability["technical_detail"] is not None
     assert (
         "Secret `https://admin:admin@the-internet.herokuapp.com` of type `URI` found"
-        in technical_detail
+        in vulnerability["technical_detail"]
     )
-    assert agent_mock[0].data.get("risk_rating") == "HIGH"
+    assert vulnerability["risk_rating"] == "HIGH"
+    assert vulnerability["vulnerability_location"]["metadata"][0]["type"] == "FILE_PATH"
+    assert (
+        vulnerability["vulnerability_location"]["metadata"][0]["value"]
+        == "/tmp/path/file.txt"
+    )
+    assert vulnerability["vulnerability_location"]["android_store"] is not None
+    assert (
+        vulnerability["vulnerability_location"]["android_store"]["package_name"]
+        == "a.b.c"
+    )
 
 
 def testSubprocessParameter_whenProcessingFile_beValid(
     scan_message_file: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
@@ -71,7 +83,7 @@ def testSubprocessParameter_whenProcessingFile_beValid(
 def testSubprocessParameter_whenProcessingLogs_beValid(
     scan_message_logs: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
@@ -91,7 +103,7 @@ def testSubprocessParameter_whenProcessingLogs_beValid(
 def testSubprocessParameter_whenProcessingRequestResponse_beValid(
     scan_message_request_response: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
@@ -111,7 +123,7 @@ def testSubprocessParameter_whenProcessingRequestResponse_beValid(
 def testSubprocessParameter_whenProcessingLink_beValid(
     scan_message_gihub_without_key: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
@@ -130,7 +142,7 @@ def testSubprocessParameter_whenProcessingLink_beValid(
 
 def testSubprocessParameter_whenProcessingInvalidGitLink_beValid(
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
@@ -149,7 +161,7 @@ def testSubprocessParameter_whenProcessingInvalidGitLink_beValid(
 
 def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVerifiedVulns(
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
@@ -198,7 +210,7 @@ def testAgent_whenFileTypeIsUnrelated_skipIt(
 def testTrufflehog_whenProcessingSecrets_shouldLogNonCriticalMessagesAtDebugLeve(
     scan_message_file: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
     caplog: pytest.LogCaptureFixture,
@@ -230,3 +242,51 @@ def testTrufflehog_whenProcessingSecrets_shouldLogNonCriticalMessagesAtDebugLeve
             or "Parsing trufflehog output." in record.message
         ):
             assert record.levelname == "DEBUG"
+
+
+def testTruffleHog_whenFileHasFindingAndIosFile_reportVulnerabilitiesWithIosAssetMetadata(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure the reported vulnerability contains metadata about the exact file & the iOS asset information."""
+
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"SourceMetadata":{"Data":{"Git":{"commit":"77b2a3e56973785a52ba4ae4b8dac61d4bac016f",'
+        b'"file":"keys","email":"counter 003ccounter@counters-MacBook-Air.local003e",'
+        b'"repository":"https://github.com/trufflesecurity/test_keys","timestamp":"2022-06-16 10:27:56 -0700"'
+        b',"line":3}}},"SourceID":0,"SourceType":16,"SourceName":"trufflehog - git","DetectorType":17,'
+        b'"DetectorName":"URI","DecoderName":"BASE64","Verified":true,'
+        b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
+        b'"Redacted":"https://********:********@the-internet.herokuapp.com",'
+        b'"ExtraData":null,"StructuredData":null}',
+    )
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={
+            "content": b"some file content",
+            "path": "/tmp/path/file.txt",
+            "ios_metadata": {"bundle_id": "a.b.c"},
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].selector == "v3.report.vulnerability"
+    vulnerability = agent_mock[0].data
+    assert vulnerability["technical_detail"] is not None
+    assert (
+        "Secret `https://admin:admin@the-internet.herokuapp.com` of type `URI` found"
+        in vulnerability["technical_detail"]
+    )
+    assert vulnerability["risk_rating"] == "HIGH"
+    assert vulnerability["vulnerability_location"]["metadata"][0]["type"] == "FILE_PATH"
+    assert (
+        vulnerability["vulnerability_location"]["metadata"][0]["value"]
+        == "/tmp/path/file.txt"
+    )
+    assert vulnerability["vulnerability_location"]["ios_store"] is not None
+    assert vulnerability["vulnerability_location"]["ios_store"]["bundle_id"] == "a.b.c"
