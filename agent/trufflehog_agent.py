@@ -196,23 +196,23 @@ def _compute_dna(
     return json.dumps(dna_data, sort_keys=True)
 
 
-def _sort_dict(d: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
+def _sort_dict(dictionary: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
     """Recursively sort dictionary keys and lists within.
     Args:
-        d: The dictionary or list to sort.
+        dictionary: The dictionary to sort.
     Returns:
         A sorted dictionary or list.
     """
-    if isinstance(d, dict):
-        return {k: _sort_dict(v) for k, v in sorted(d.items())}
-    if isinstance(d, list):
+    if isinstance(dictionary, dict):
+        return {k: _sort_dict(v) for k, v in sorted(dictionary.items())}
+    if isinstance(dictionary, list):
         return sorted(
-            d,
+            dictionary,
             key=lambda x: json.dumps(x, sort_keys=True)
             if isinstance(x, dict)
             else str(x),
         )
-    return d
+    return dictionary
 
 
 if __name__ == "__main__":
