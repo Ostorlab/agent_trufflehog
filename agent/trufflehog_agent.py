@@ -1,5 +1,6 @@
 """Trufflehog agent."""
 
+import json
 import logging
 import subprocess
 import tempfile
@@ -105,6 +106,10 @@ class TruffleHogAgent(
                     risk_rating=vuln_mixin.RiskRating.HIGH,
                     technical_detail=technical_detail,
                     vulnerability_location=vulnerability_location,
+                    dna=_compute_dna(
+                        vuln_title=kb.KB.SECRETS_REVIEW.title,
+                        vuln_location=vulnerability_location,
+                    ),
                 )
 
     def _process_scanner_output(self, output: bytes) -> list[dict[str, Any]]:
@@ -168,6 +173,46 @@ class TruffleHogAgent(
         secrets = self._process_scanner_output(cmd_output)
 
         self._report_vulnz(secrets, message)
+
+
+def _compute_dna(
+    vuln_title: str,
+    vuln_location: vuln_mixin.VulnerabilityLocation | None,
+) -> str:
+    """Compute a deterministic, debuggable DNA representation for a vulnerability.
+    Args:
+        vuln_title: The title of the vulnerability.
+        vuln_location: The location of the vulnerability.
+    Returns:
+        A deterministic JSON representation of the vulnerability DNA.
+    """
+    dna_data: dict[str, Any] = {"title": vuln_title}
+
+    if vuln_location is not None:
+        location_dict: dict[str, Any] = vuln_location.to_dict()
+        sorted_location_dict = _sort_dict(location_dict)
+        dna_data["location"] = sorted_location_dict
+
+    return json.dumps(dna_data, sort_keys=True)
+
+
+def _sort_dict(dictionary: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
+    """Recursively sort dictionary keys and lists within.
+    Args:
+        dictionary: The dictionary to sort.
+    Returns:
+        A sorted dictionary or list.
+    """
+    if isinstance(dictionary, dict):
+        return {k: _sort_dict(v) for k, v in sorted(dictionary.items())}
+    if isinstance(dictionary, list):
+        return sorted(
+            dictionary,
+            key=lambda x: json.dumps(x, sort_keys=True)
+            if isinstance(x, dict)
+            else str(x),
+        )
+    return dictionary
 
 
 if __name__ == "__main__":
