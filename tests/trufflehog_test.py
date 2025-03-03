@@ -42,7 +42,7 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     assert len(agent_mock) == 1
     assert (
         agent_mock[0].data["dna"]
-        == '{"location": {"android_store": {"package_name": "a.b.c"}, "metadata": [{"type": "FILE_PATH", "value": "/tmp/path/file.txt"}]}, "title": "Secret information stored in the application"}'
+        == '{"location": {"android_store": {"package_name": "a.b.c"}, "metadata": [{"type": "FILE_PATH", "value": "/tmp/path/file.txt"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
     )
     assert agent_mock[0].selector == "v3.report.vulnerability"
     vulnerability = agent_mock[0].data
@@ -191,7 +191,7 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVe
     assert len(agent_mock) == 1
     assert (
         agent_mock[0].data["dna"]
-        == '{"title": "Secret information stored in the application"}'
+        == '{"secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
     )
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
     assert (
@@ -285,7 +285,7 @@ def testTruffleHog_whenFileHasFindingAndIosFile_reportVulnerabilitiesWithIosAsse
     assert len(agent_mock) == 1
     assert (
         agent_mock[0].data["dna"]
-        == '{"location": {"ios_store": {"bundle_id": "a.b.c"}, "metadata": [{"type": "FILE_PATH", "value": "/tmp/path/file.txt"}]}, "title": "Secret information stored in the application"}'
+        == '{"location": {"ios_store": {"bundle_id": "a.b.c"}, "metadata": [{"type": "FILE_PATH", "value": "/tmp/path/file.txt"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
     )
     assert agent_mock[0].selector == "v3.report.vulnerability"
     vulnerability = agent_mock[0].data

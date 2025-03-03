@@ -5,6 +5,7 @@ import logging
 import subprocess
 import tempfile
 from typing import Any
+from urllib import parse
 
 from ostorlab.agent import agent
 from ostorlab.agent.kb import kb
@@ -15,6 +16,7 @@ from rich import logging as rich_logging
 from ostorlab.assets import asset as os_asset
 from ostorlab.assets import ios_store
 from ostorlab.assets import android_store
+from ostorlab.assets import domain_name
 
 from agent import input_type_handler
 from agent import utils
@@ -48,24 +50,49 @@ def _prepare_vulnerability_location(
     """Prepare a `VulnerabilityLocation` instance with file path as vulnerability metadata and
     iOS/Android asset & their respective bundle-ID/package name as asset metadata.
     """
-    package_name = message.data.get("android_metadata", {}).get("package_name")
-    bundle_id = message.data.get("ios_metadata", {}).get("bundle_id")
-    if bundle_id is None and package_name is None:
-        return None
-    asset: os_asset.Asset | None = None
-    if bundle_id is not None:
-        asset = ios_store.IOSStore(bundle_id=bundle_id)
-    if package_name is not None:
-        asset = android_store.AndroidStore(package_name=package_name)
+    asset: (
+        domain_name.DomainName | ios_store.IOSStore | android_store.AndroidStore | None
+    ) = None
+    metadata = []
+    if message.selector == "v3.asset.link":
+        url = message.data.get("url")
+        url_netloc = parse.urlparse(url).netloc
+        asset = domain_name.DomainName(name=url_netloc)
+        metadata.append(
+            vuln_mixin.VulnerabilityLocationMetadata(
+                metadata_type=vuln_mixin.MetadataType.URL,
+                value=url,
+            )
+        )
+    elif message.selector == "v3.capture.logs":
+        metadata.append(
+            vuln_mixin.VulnerabilityLocationMetadata(
+                metadata_type=vuln_mixin.MetadataType.LOG,
+                value=message.data.get("message"),
+            )
+        )
 
-    return vuln_mixin.VulnerabilityLocation(
-        asset=asset,
-        metadata=[
+    else:
+        package_name = message.data.get("android_metadata", {}).get("package_name")
+        bundle_id = message.data.get("ios_metadata", {}).get("bundle_id")
+        if bundle_id is None and package_name is None:
+            return None
+        asset: os_asset.Asset | None = None
+        if bundle_id is not None:
+            asset = ios_store.IOSStore(bundle_id=bundle_id)
+        if package_name is not None:
+            asset = android_store.AndroidStore(package_name=package_name)
+
+        metadata.append(
             vuln_mixin.VulnerabilityLocationMetadata(
                 metadata_type=vuln_mixin.MetadataType.FILE_PATH,
                 value=file_path,
             )
-        ],
+        )
+
+    return vuln_mixin.VulnerabilityLocation(
+        asset=asset,
+        metadata=metadata,
     )
 
 
@@ -109,6 +136,7 @@ class TruffleHogAgent(
                     dna=_compute_dna(
                         vuln_title=kb.KB.SECRETS_REVIEW.title,
                         vuln_location=vulnerability_location,
+                        secret_token=secret_token,
                     ),
                 )
 
@@ -178,11 +206,13 @@ class TruffleHogAgent(
 def _compute_dna(
     vuln_title: str,
     vuln_location: vuln_mixin.VulnerabilityLocation | None,
+    secret_token: str,
 ) -> str:
     """Compute a deterministic, debuggable DNA representation for a vulnerability.
     Args:
         vuln_title: The title of the vulnerability.
         vuln_location: The location of the vulnerability.
+        secret_token: The founded secret.
     Returns:
         A deterministic JSON representation of the vulnerability DNA.
     """
@@ -192,6 +222,9 @@ def _compute_dna(
         location_dict: dict[str, Any] = vuln_location.to_dict()
         sorted_location_dict = _sort_dict(location_dict)
         dna_data["location"] = sorted_location_dict
+
+    if secret_token is not None:
+        dna_data["secret_token"] = secret_token
 
     return json.dumps(dna_data, sort_keys=True)
 
