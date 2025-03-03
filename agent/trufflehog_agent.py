@@ -13,7 +13,6 @@ from ostorlab.agent.message import message as m
 from ostorlab.agent.mixins import agent_persist_mixin
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin as vuln_mixin
 from rich import logging as rich_logging
-from ostorlab.assets import asset as os_asset
 from ostorlab.assets import ios_store
 from ostorlab.assets import android_store
 from ostorlab.assets import domain_name
@@ -57,27 +56,29 @@ def _prepare_vulnerability_location(
     if message.selector == "v3.asset.link":
         url = message.data.get("url")
         url_netloc = parse.urlparse(url).netloc
-        asset = domain_name.DomainName(name=url_netloc)
-        metadata.append(
-            vuln_mixin.VulnerabilityLocationMetadata(
-                metadata_type=vuln_mixin.MetadataType.URL,
-                value=url,
+        asset = domain_name.DomainName(name=str(url_netloc))
+        if url is not None:
+            metadata.append(
+                vuln_mixin.VulnerabilityLocationMetadata(
+                    metadata_type=vuln_mixin.MetadataType.URL,
+                    value=url,
+                )
             )
-        )
     elif message.selector == "v3.capture.logs":
-        metadata.append(
-            vuln_mixin.VulnerabilityLocationMetadata(
-                metadata_type=vuln_mixin.MetadataType.LOG,
-                value=message.data.get("message"),
+        log = message.data.get("message")
+        if log is not None:
+            metadata.append(
+                vuln_mixin.VulnerabilityLocationMetadata(
+                    metadata_type=vuln_mixin.MetadataType.LOG,
+                    value=log,
+                )
             )
-        )
 
     else:
         package_name = message.data.get("android_metadata", {}).get("package_name")
         bundle_id = message.data.get("ios_metadata", {}).get("bundle_id")
         if bundle_id is None and package_name is None:
             return None
-        asset: os_asset.Asset | None = None
         if bundle_id is not None:
             asset = ios_store.IOSStore(bundle_id=bundle_id)
         if package_name is not None:
@@ -163,7 +164,7 @@ class TruffleHogAgent(
         Args:
             message: the message containing the trufflehog tool input file.
 
-        Returns:
+        Returns:<
             None.
         """
         logger.debug("Processing input and Starting trufflehog.")
