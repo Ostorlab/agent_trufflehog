@@ -44,7 +44,7 @@ def _process_file(content: bytes) -> bytes | None:
 
 def _prepare_vulnerability_location(
     message: m.Message,
-    file_path: str,
+    file_path: str | None,
 ) -> vuln_mixin.VulnerabilityLocation | None:
     """Prepare a `VulnerabilityLocation` instance with file path as vulnerability metadata and
     iOS/Android asset & their respective bundle-ID/package name as asset metadata.
@@ -87,7 +87,7 @@ def _prepare_vulnerability_location(
         metadata.append(
             vuln_mixin.VulnerabilityLocationMetadata(
                 metadata_type=vuln_mixin.MetadataType.FILE_PATH,
-                value=file_path,
+                value=file_path or "",
             )
         )
 
@@ -124,9 +124,9 @@ class TruffleHogAgent(
 
             if path is not None:
                 technical_detail += f"""found in file `{path}`."""
-                vulnerability_location = _prepare_vulnerability_location(
-                    message=message, file_path=path
-                )
+            vulnerability_location = _prepare_vulnerability_location(
+                message=message, file_path=path
+            )
 
             if vuln.get("Verified") is True:
                 self.report_vulnerability(

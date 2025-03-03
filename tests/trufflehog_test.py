@@ -333,5 +333,5 @@ def testTrufflehog_whenLinkdAndUnverifiedSecrets_shouldReportOnlyVerifiedVulns(
     assert len(agent_mock) == 1
     assert (
         agent_mock[0].data["dna"]
-        == '{"secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
+        == '{"location": {"domain_name": {"name": "example.com"}, "metadata": [{"type": "URL", "value": "http://example.com/test"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
     )
