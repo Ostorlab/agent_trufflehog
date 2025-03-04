@@ -321,7 +321,9 @@ def testTrufflehog_whenLinkdAndUnverifiedSecrets_shouldReportOnlyVerifiedVulns(
         b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
         b'"Redacted":"https://********:********@the-internet.herokuapp.com"}',
     )
+
     trufflehog_agent_file.process(msg)
+
     mocker.patch(
         "subprocess.check_output",
         return_value=b'{"Verified":false,'
@@ -347,13 +349,13 @@ def testTrufflehog_whenLogsMessageAndUnverifiedSecrets_shouldReportOnlyVerifiedV
         selector="v3.capture.logs",
         data={"message": "just a dummy logs"},
     )
-    # mocker.patch("agent.input_type_handler.get_link_type", return_value="git")
     mocker.patch(
         "subprocess.check_output",
         return_value=b'{"Verified":true,'
         b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
         b'"Redacted":"https://********:********@the-internet.herokuapp.com"}',
     )
+
     trufflehog_agent_file.process(msg)
     mocker.patch(
         "subprocess.check_output",
