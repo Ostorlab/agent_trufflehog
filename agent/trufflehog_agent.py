@@ -1,9 +1,11 @@
 """Trufflehog agent."""
 
+import json
 import logging
 import subprocess
 import tempfile
 from typing import Any
+from urllib import parse
 
 from ostorlab.agent import agent
 from ostorlab.agent.kb import kb
@@ -11,9 +13,9 @@ from ostorlab.agent.message import message as m
 from ostorlab.agent.mixins import agent_persist_mixin
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin as vuln_mixin
 from rich import logging as rich_logging
-from ostorlab.assets import asset as os_asset
 from ostorlab.assets import ios_store
 from ostorlab.assets import android_store
+from ostorlab.assets import domain_name
 
 from agent import input_type_handler
 from agent import utils
@@ -42,29 +44,56 @@ def _process_file(content: bytes) -> bytes | None:
 
 def _prepare_vulnerability_location(
     message: m.Message,
-    file_path: str,
+    file_path: str | None,
 ) -> vuln_mixin.VulnerabilityLocation | None:
     """Prepare a `VulnerabilityLocation` instance with file path as vulnerability metadata and
     iOS/Android asset & their respective bundle-ID/package name as asset metadata.
     """
-    package_name = message.data.get("android_metadata", {}).get("package_name")
-    bundle_id = message.data.get("ios_metadata", {}).get("bundle_id")
-    if bundle_id is None and package_name is None:
-        return None
-    asset: os_asset.Asset | None = None
-    if bundle_id is not None:
-        asset = ios_store.IOSStore(bundle_id=bundle_id)
-    if package_name is not None:
-        asset = android_store.AndroidStore(package_name=package_name)
+    asset: (
+        domain_name.DomainName | ios_store.IOSStore | android_store.AndroidStore | None
+    ) = None
+    metadata = []
+    if message.selector == "v3.asset.link":
+        url = message.data.get("url")
+        url_netloc = parse.urlparse(url).netloc
+        asset = domain_name.DomainName(name=str(url_netloc))
+        if url is not None:
+            metadata.append(
+                vuln_mixin.VulnerabilityLocationMetadata(
+                    metadata_type=vuln_mixin.MetadataType.URL,
+                    value=url,
+                )
+            )
+    elif message.selector == "v3.capture.logs":
+        log = message.data.get("message")
+        if log is not None:
+            metadata.append(
+                vuln_mixin.VulnerabilityLocationMetadata(
+                    metadata_type=vuln_mixin.MetadataType.LOG,
+                    value=log,
+                )
+            )
+
+    else:
+        package_name = message.data.get("android_metadata", {}).get("package_name")
+        bundle_id = message.data.get("ios_metadata", {}).get("bundle_id")
+        if bundle_id is None and package_name is None:
+            return None
+        if bundle_id is not None:
+            asset = ios_store.IOSStore(bundle_id=bundle_id)
+        if package_name is not None:
+            asset = android_store.AndroidStore(package_name=package_name)
+
+        metadata.append(
+            vuln_mixin.VulnerabilityLocationMetadata(
+                metadata_type=vuln_mixin.MetadataType.FILE_PATH,
+                value=file_path or "",
+            )
+        )
 
     return vuln_mixin.VulnerabilityLocation(
         asset=asset,
-        metadata=[
-            vuln_mixin.VulnerabilityLocationMetadata(
-                metadata_type=vuln_mixin.MetadataType.FILE_PATH,
-                value=file_path,
-            )
-        ],
+        metadata=metadata,
     )
 
 
@@ -95,9 +124,9 @@ class TruffleHogAgent(
 
             if path is not None:
                 technical_detail += f"""found in file `{path}`."""
-                vulnerability_location = _prepare_vulnerability_location(
-                    message=message, file_path=path
-                )
+            vulnerability_location = _prepare_vulnerability_location(
+                message=message, file_path=path
+            )
 
             if vuln.get("Verified") is True:
                 self.report_vulnerability(
@@ -105,6 +134,11 @@ class TruffleHogAgent(
                     risk_rating=vuln_mixin.RiskRating.HIGH,
                     technical_detail=technical_detail,
                     vulnerability_location=vulnerability_location,
+                    dna=_compute_dna(
+                        vuln_title=kb.KB.SECRETS_REVIEW.title,
+                        vuln_location=vulnerability_location,
+                        secret_token=secret_token,
+                    ),
                 )
 
     def _process_scanner_output(self, output: bytes) -> list[dict[str, Any]]:
@@ -130,7 +164,7 @@ class TruffleHogAgent(
         Args:
             message: the message containing the trufflehog tool input file.
 
-        Returns:
+        Returns:<
             None.
         """
         logger.debug("Processing input and Starting trufflehog.")
@@ -168,6 +202,51 @@ class TruffleHogAgent(
         secrets = self._process_scanner_output(cmd_output)
 
         self._report_vulnz(secrets, message)
+
+
+def _compute_dna(
+    vuln_title: str,
+    vuln_location: vuln_mixin.VulnerabilityLocation | None,
+    secret_token: str,
+) -> str:
+    """Compute a deterministic, debuggable DNA representation for a vulnerability.
+    Args:
+        vuln_title: The title of the vulnerability.
+        vuln_location: The location of the vulnerability.
+        secret_token: The founded secret.
+    Returns:
+        A deterministic JSON representation of the vulnerability DNA.
+    """
+    dna_data: dict[str, Any] = {"title": vuln_title}
+
+    if vuln_location is not None:
+        location_dict: dict[str, Any] = vuln_location.to_dict()
+        sorted_location_dict = _sort_dict(location_dict)
+        dna_data["location"] = sorted_location_dict
+
+    if secret_token is not None:
+        dna_data["secret_token"] = secret_token
+
+    return json.dumps(dna_data, sort_keys=True)
+
+
+def _sort_dict(dictionary: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
+    """Recursively sort dictionary keys and lists within.
+    Args:
+        dictionary: The dictionary to sort.
+    Returns:
+        A sorted dictionary or list.
+    """
+    if isinstance(dictionary, dict):
+        return {k: _sort_dict(v) for k, v in sorted(dictionary.items())}
+    if isinstance(dictionary, list):
+        return sorted(
+            dictionary,
+            key=lambda x: json.dumps(x, sort_keys=True)
+            if isinstance(x, dict)
+            else str(x),
+        )
+    return dictionary
 
 
 if __name__ == "__main__":

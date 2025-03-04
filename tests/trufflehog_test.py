@@ -40,6 +40,10 @@ def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
     trufflehog_agent_file.process(msg)
 
     assert len(agent_mock) == 1
+    assert (
+        agent_mock[0].data["dna"]
+        == '{"location": {"android_store": {"package_name": "a.b.c"}, "metadata": [{"type": "FILE_PATH", "value": "/tmp/path/file.txt"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
+    )
     assert agent_mock[0].selector == "v3.report.vulnerability"
     vulnerability = agent_mock[0].data
     assert vulnerability["technical_detail"] is not None
@@ -185,6 +189,10 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVe
     trufflehog_agent_file.process(msg)
 
     assert len(agent_mock) == 1
+    assert (
+        agent_mock[0].data["dna"]
+        == '{"secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
+    )
     assert agent_mock[0].data.get("risk_rating") == "HIGH"
     assert (
         "Secret `https://admin:admin@the-internet.herokuapp.com` found in file `magic_is_real.js`."
@@ -275,6 +283,10 @@ def testTruffleHog_whenFileHasFindingAndIosFile_reportVulnerabilitiesWithIosAsse
     trufflehog_agent_file.process(msg)
 
     assert len(agent_mock) == 1
+    assert (
+        agent_mock[0].data["dna"]
+        == '{"location": {"ios_store": {"bundle_id": "a.b.c"}, "metadata": [{"type": "FILE_PATH", "value": "/tmp/path/file.txt"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
+    )
     assert agent_mock[0].selector == "v3.report.vulnerability"
     vulnerability = agent_mock[0].data
     assert vulnerability["technical_detail"] is not None
@@ -290,3 +302,71 @@ def testTruffleHog_whenFileHasFindingAndIosFile_reportVulnerabilitiesWithIosAsse
     )
     assert vulnerability["vulnerability_location"]["ios_store"] is not None
     assert vulnerability["vulnerability_location"]["ios_store"]["bundle_id"] == "a.b.c"
+
+
+def testTrufflehog_whenLinkdAndUnverifiedSecrets_shouldReportOnlyVerifiedVulns(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    msg = message.Message.from_data(
+        selector="v3.asset.link",
+        data={"url": "http://example.com/test"},
+    )
+    mocker.patch("agent.input_type_handler.get_link_type", return_value="git")
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"Verified":true,'
+        b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
+        b'"Redacted":"https://********:********@the-internet.herokuapp.com"}',
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"Verified":false,'
+        b'"Raw":"plain_secret",'
+        b'"Redacted":"plain*secret"}',
+    )
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 1
+    assert (
+        agent_mock[0].data["dna"]
+        == '{"location": {"domain_name": {"name": "example.com"}, "metadata": [{"type": "URL", "value": "http://example.com/test"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
+    )
+
+
+def testTrufflehog_whenLogsMessageAndUnverifiedSecrets_shouldReportOnlyVerifiedVulns(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    msg = message.Message.from_data(
+        selector="v3.capture.logs",
+        data={"message": "just a dummy logs"},
+    )
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"Verified":true,'
+        b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
+        b'"Redacted":"https://********:********@the-internet.herokuapp.com"}',
+    )
+
+    trufflehog_agent_file.process(msg)
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"Verified":false,'
+        b'"Raw":"plain_secret",'
+        b'"Redacted":"plain*secret"}',
+    )
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 1
+    assert (
+        agent_mock[0].data["dna"]
+        == '{"location": {"metadata": [{"type": "LOG", "value": "just a dummy logs"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
+    )
