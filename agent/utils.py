@@ -62,6 +62,17 @@ def get_file_type(filename: str, file_content: bytes) -> str:
     magic_type = magic.from_buffer(file_content)
     magic_mime_type = magic.from_buffer(file_content, mime=True)
     if (
+        filename.startswith("assets/dexopt")
+        or filename.startswith("res/color")
+        or filename.endswith(".properties")
+        or filename.startswith("res/drawable")
+        or filename.startswith("res/anim")
+        or filename.startswith("res/layout")
+        or "PhoneNumberAlternate" in filename
+        or "PhoneNumberMetadata" in filename
+    ):
+        return "custom"
+    if (
         magic_type == "Android binary XML"
         and filename.endswith("AndroidManifest.xml") is True
     ):
@@ -84,7 +95,11 @@ def get_file_type(filename: str, file_content: bytes) -> str:
         return "image"
     if filename.endswith(".json"):
         return "json"
-    if magic_mime_type.startswith("font/") or "Font Format" in magic_type:
+    if (
+        magic_mime_type.startswith("font/")
+        or "Font Format" in magic_type
+        or filename.endswith(".otf")
+    ):
         return "font"
     if filename.endswith(".css"):
         return "css"
