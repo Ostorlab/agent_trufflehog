@@ -28,7 +28,7 @@ BLACKLISTED_FILE_TYPES = [
     "apk",
     "xapk",
     "ipa",
-    "custom",
+    "irrelevant",
 ]
 
 logging.basicConfig(

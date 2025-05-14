@@ -71,7 +71,7 @@ def get_file_type(filename: str, file_content: bytes) -> str:
         or "PhoneNumberAlternate" in filename
         or "PhoneNumberMetadata" in filename
     ):
-        return "custom"
+        return "irrelevant"
     if (
         magic_type == "Android binary XML"
         and filename.endswith("AndroidManifest.xml") is True
