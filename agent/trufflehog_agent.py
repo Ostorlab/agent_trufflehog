@@ -20,7 +20,16 @@ from ostorlab.assets import domain_name
 from agent import input_type_handler
 from agent import utils
 
-BLACKLISTED_FILE_TYPES = ["image", "apple_image", "font", "css", "apk", "xapk", "ipa"]
+BLACKLISTED_FILE_TYPES = [
+    "image",
+    "apple_image",
+    "font",
+    "css",
+    "apk",
+    "xapk",
+    "ipa",
+    "irrelevant",
+]
 
 logging.basicConfig(
     format="%(message)s",
