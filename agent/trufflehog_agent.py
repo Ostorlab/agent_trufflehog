@@ -185,6 +185,7 @@ class TruffleHogAgent(
                     "Skipping file %s with blacklisted type %s", path, file_type
                 )
                 return
+            logger.info("Processing file %s with type %s", path, file_type)
             cmd_output = _process_file(content)
         elif message.selector.startswith("v3.capture.logs"):
             content = message.data.get("message", "")
