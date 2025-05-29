@@ -31,6 +31,12 @@ BLACKLISTED_FILE_TYPES = [
     "irrelevant",
 ]
 
+BLACKLISTED_FILE_PATHS = [
+    "res/color",
+    "res/drawable",
+    "res/layout",
+]
+
 logging.basicConfig(
     format="%(message)s",
     datefmt="[%X]",
@@ -189,7 +195,7 @@ class TruffleHogAgent(
             path = message.data.get("path", "")
             content = message.data.get("content", b"")
             file_type = utils.get_file_type(filename=path, file_content=content)
-            if file_type in BLACKLISTED_FILE_TYPES:
+            if file_type in BLACKLISTED_FILE_TYPES or any(blacklisted_path in path for  blacklisted_path in BLACKLISTED_FILE_PATHS):
                 logger.debug(
                     "Skipping file %s with blacklisted type %s", path, file_type
                 )
