@@ -5,6 +5,17 @@ from typing import Any
 
 import magic
 
+IRRELEVANT_FILE_PATHS = [
+    "res/color",
+    "res/drawable",
+    "res/anim",
+    "res/layout",
+    "assets/dexopt",
+    ".properties",
+    "PhoneNumberAlternate",
+    "PhoneNumberMetadata",
+]
+
 
 def load_newline_json(byte_data: bytes) -> list[dict[str, Any]]:
     """Convertes bytes to a list of dictionaries.
@@ -62,14 +73,9 @@ def get_file_type(filename: str, file_content: bytes) -> str:
     magic_type = magic.from_buffer(file_content)
     magic_mime_type = magic.from_buffer(file_content, mime=True)
     if (
-        filename.startswith("assets/dexopt")
-        or filename.startswith("res/color")
-        or filename.endswith(".properties")
-        or filename.startswith("res/drawable")
-        or filename.startswith("res/anim")
-        or filename.startswith("res/layout")
-        or "PhoneNumberAlternate" in filename
-        or "PhoneNumberMetadata" in filename
+        any(
+                irrelevant_path in filename for irrelevant_path in IRRELEVANT_FILE_PATHS
+        )
     ):
         return "irrelevant"
     if (
