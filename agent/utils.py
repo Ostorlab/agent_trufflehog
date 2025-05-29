@@ -72,11 +72,7 @@ def get_file_type(filename: str, file_content: bytes) -> str:
     """
     magic_type = magic.from_buffer(file_content)
     magic_mime_type = magic.from_buffer(file_content, mime=True)
-    if (
-        any(
-                irrelevant_path in filename for irrelevant_path in IRRELEVANT_FILE_PATHS
-        )
-    ):
+    if any(irrelevant_path in filename for irrelevant_path in IRRELEVANT_FILE_PATHS):
         return "irrelevant"
     if (
         magic_type == "Android binary XML"
