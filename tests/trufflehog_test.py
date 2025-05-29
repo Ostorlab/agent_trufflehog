@@ -371,6 +371,7 @@ def testTrufflehog_whenLogsMessageAndUnverifiedSecrets_shouldReportOnlyVerifiedV
         == '{"location": {"metadata": [{"type": "LOG", "value": "just a dummy logs"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
     )
 
+
 def testTruffleHog_whenFileHasBlackListedPath_skipProcessing(
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: dict[str | bytes, str | bytes],
