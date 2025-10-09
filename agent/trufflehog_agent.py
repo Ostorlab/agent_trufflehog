@@ -184,6 +184,7 @@ class TruffleHogAgent(
             link_type = input_type_handler.get_link_type(link)
             if link_type is None:
                 return
+            logger.info("Processing link %s of type %s", link, link_type)
             cmd_output = self.run_scanner(link_type, link)
         elif message.selector.startswith("v3.asset.file"):
             path = message.data.get("path", "")
@@ -198,10 +199,17 @@ class TruffleHogAgent(
             cmd_output = _process_file(content)
         elif message.selector.startswith("v3.capture.logs"):
             content = message.data.get("message", "")
+            logger.info(
+                "Processing log content with level %s", message.data.get("level")
+            )
             cmd_output = _process_file(content.encode("utf-8"))
         elif message.selector.startswith("v3.capture.request_response"):
             response = message.data.get("response", {})
             request = message.data.get("request", {})
+            logger.info(
+                "Processing request and response content for url %s",
+                request.get("url", ""),
+            )
             content = response.get("body", b"") + b"\n" + request.get("body", b"")
             cmd_output = _process_file(content)
         if cmd_output is None:
