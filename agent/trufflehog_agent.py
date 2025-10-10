@@ -253,7 +253,7 @@ class TruffleHogAgent(
             content = message.data.get("message", "")
             if content is not None:
                 cmd_output, combined_content = self._process_logs(
-                    content, force_process=False
+                    content.encode("utf-8"), force_process=False
                 )
         elif message.selector == "v3.report.event.scan.done":
             logger.info("Processing scan done message.")
