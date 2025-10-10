@@ -60,7 +60,7 @@ def _process_file(content: bytes) -> bytes | None:
 def _prepare_vulnerability_location(
     message: m.Message,
     file_path: str | None,
-    content: bytes,
+    content: bytes | None,
 ) -> vuln_mixin.VulnerabilityLocation | None:
     """Prepare a `VulnerabilityLocation` instance with file path as vulnerability metadata and
     iOS/Android asset & their respective bundle-ID/package name as asset metadata.
@@ -84,12 +84,13 @@ def _prepare_vulnerability_location(
         message.selector == "v3.capture.logs"
         or message.selector == "v3.report.event.scan.done"
     ):
-        metadata.append(
-            vuln_mixin.VulnerabilityLocationMetadata(
-                metadata_type=vuln_mixin.MetadataType.LOG,
-                value=content.decode("utf-8"),
+        if content is not None:
+            metadata.append(
+                vuln_mixin.VulnerabilityLocationMetadata(
+                    metadata_type=vuln_mixin.MetadataType.LOG,
+                    value=content.decode("utf-8"),
+                )
             )
-        )
 
     else:
         package_name = message.data.get("android_metadata", {}).get("package_name")
@@ -165,7 +166,7 @@ class TruffleHogAgent(
         return None, None
 
     def _report_vulnz(
-        self, vulnz: list[dict[str, Any]], message: m.Message, content: bytes
+        self, vulnz: list[dict[str, Any]], message: m.Message, content: bytes | None
     ) -> None:
         for vuln in vulnz:
             secret_token = vuln.get("Raw") or vuln.get("Redacted")
