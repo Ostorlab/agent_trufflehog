@@ -229,8 +229,8 @@ class TruffleHogAgent(
         """
         logger.debug("Processing input and Starting trufflehog.")
 
-        cmd_output = None
-        combined_content = b""
+        cmd_output: bytes | None = None
+        combined_content: bytes | None = b""
         if message.selector.startswith("v3.asset.link"):
             link = message.data.get("url", "")
             link_type = input_type_handler.get_link_type(link)
