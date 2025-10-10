@@ -4,9 +4,10 @@ import json
 import logging
 import subprocess
 import tempfile
-import time
+
 from typing import Any
 from urllib import parse
+import tenacity
 
 from ostorlab.agent import agent
 from ostorlab.agent.kb import kb
@@ -88,7 +89,7 @@ def _prepare_vulnerability_location(
             metadata.append(
                 vuln_mixin.VulnerabilityLocationMetadata(
                     metadata_type=vuln_mixin.MetadataType.LOG,
-                    value=content.decode("utf-8"),
+                    value=content.decode("utf-8", errors="ignore"),
                 )
             )
 
@@ -125,6 +126,14 @@ class TruffleHogAgent(
     this class uses the TruffleHog tool to scan files for secrets.
     """
 
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(LOCK_RETRIES),
+        wait=tenacity.wait_fixed(LOCK_RETRY_DELAY),
+    )
+    def _acquire_lock(self) -> bool:
+        """Attempt to acquire Redis lock."""
+        return self.set_add(LOGS_LOCK_KEY, "locked") is True
+
     def _process_logs(
         self, log_content: bytes | None, force_process: bool = False
     ) -> tuple[bytes | None, bytes | None]:
@@ -137,9 +146,8 @@ class TruffleHogAgent(
         Returns:
             The scanner output if logs were processed, None otherwise
         """
-        retries = LOCK_RETRIES
-        while retries > 0:
-            if self.set_add(LOGS_LOCK_KEY, "locked"):
+        try:
+            if self._acquire_lock():
                 try:
                     if log_content is not None:
                         self.set_add(LOGS_SET_KEY, log_content)
@@ -154,15 +162,12 @@ class TruffleHogAgent(
                             cmd_output = _process_file(combined_content)
                             self.delete(LOGS_SET_KEY)
                             return cmd_output, combined_content
-                    break
                 finally:
                     self.delete(LOGS_LOCK_KEY)
-            else:
-                retries -= 1
-                time.sleep(LOCK_RETRY_DELAY)
+        except Exception as e:
+            logger.error(f"Failed to process logs: {e}")
+            raise
 
-        if retries == 0:
-            logger.error("Failed to acquire lock after multiple retries")
         return None, None
 
     def _report_vulnz(

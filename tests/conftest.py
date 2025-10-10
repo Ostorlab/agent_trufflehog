@@ -92,3 +92,19 @@ def apk_message_file() -> message.Message:
     with open("./tests/files/fake.apk", "rb") as infile:
         msg_data = {"content": infile.read(), "path": "tests/files/fake.apk"}
     return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
+def log_contents() -> list[message.Message]:
+    """Creates log content messages."""
+    messages = []
+    with open("./tests/files/logs.txt", "r") as infile:
+        contents = infile.readlines()
+        for content in contents:
+            messages.append(
+                message.Message.from_data(
+                    selector="v3.capture.logs",
+                    data={"message": content},
+                )
+            )
+    return messages

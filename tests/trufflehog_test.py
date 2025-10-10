@@ -347,6 +347,7 @@ def testTrufflehog_whenLogsMessageAndUnverifiedSecrets_shouldReportOnlyVerifiedV
     agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
+    log_contents: list[message.Message],
 ) -> None:
     mocker.patch(
         "subprocess.check_output",
@@ -355,19 +356,13 @@ def testTrufflehog_whenLogsMessageAndUnverifiedSecrets_shouldReportOnlyVerifiedV
         b'"Redacted":"https://********:********@the-internet.herokuapp.com"}',
     )
 
-    with open("./tests/files/logs.txt", "r") as infile:
-        contents = infile.readlines()
-        for content in contents:
-            msg = message.Message.from_data(
-                selector="v3.capture.logs",
-                data={"message": content},
-            )
-            trufflehog_agent_file.process(msg)
-        msg = message.Message.from_data(
-            selector="v3.report.event.scan.done",
-            data={},
-        )
-        trufflehog_agent_file.process(msg)
+    for log_content_message in log_contents:
+        trufflehog_agent_file.process(log_content_message)
+    msg = message.Message.from_data(
+        selector="v3.report.event.scan.done",
+        data={},
+    )
+    trufflehog_agent_file.process(msg)
 
     assert len(agent_mock) == 12
     assert "https://admin:admin@the-internet.herokuapp.com" in agent_mock[0].data["dna"]
