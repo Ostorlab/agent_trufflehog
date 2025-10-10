@@ -369,3 +369,23 @@ def testTrufflehog_whenLogsMessageAndUnverifiedSecrets_shouldReportOnlyVerifiedV
     assert len(agent_mock) == 12
     assert "https://admin:admin@the-internet.herokuapp.com" in agent_mock[0].data["dna"]
     assert "https://admin:admin@the-internet.herokuapp.com" in agent_mock[1].data["dna"]
+
+
+def testTruffleHog_whenFileHasBlackListedPath_skipProcessing(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that we skip blacklisted path files."""
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={
+            "content": b"some file content",
+            "path": "/tmp/res/drawable/file.txt",
+            "ios_metadata": {"bundle_id": "a.b.c"},
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 0

@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine as scanner
+FROM golang:1.24-alpine as scanner
 RUN mkdir /install
 WORKDIR /install
 RUN apk add git
@@ -11,6 +11,7 @@ RUN apk add build-base
 RUN mkdir /install
 WORKDIR /install
 COPY requirement.txt /requirement.txt
+RUN pip install --upgrade pip
 RUN pip install --prefix=/install -r /requirement.txt
 
 FROM base
