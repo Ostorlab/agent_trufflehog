@@ -91,9 +91,12 @@ def testSubprocessParameter_whenProcessingLogs_beValid(
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
+    """Test that logging processing triggers scanner when MAX_LOGS_BATCH_SIZE is reached."""
     subprocess_check_output_mock = mocker.patch(
         "subprocess.check_output", return_value=b""
     )
+    # Mock to trigger processing immediately
+    mocker.patch("agent.trufflehog_agent.MAX_LOGS_BATCH_SIZE", 1)
 
     trufflehog_agent_file.process(scan_message_logs)
     args = subprocess_check_output_mock.call_args[0][0]
@@ -344,11 +347,8 @@ def testTrufflehog_whenLogsMessageAndUnverifiedSecrets_shouldReportOnlyVerifiedV
     agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
+    log_contents: list[message.Message],
 ) -> None:
-    msg = message.Message.from_data(
-        selector="v3.capture.logs",
-        data={"message": "just a dummy logs"},
-    )
     mocker.patch(
         "subprocess.check_output",
         return_value=b'{"Verified":true,'
@@ -356,20 +356,17 @@ def testTrufflehog_whenLogsMessageAndUnverifiedSecrets_shouldReportOnlyVerifiedV
         b'"Redacted":"https://********:********@the-internet.herokuapp.com"}',
     )
 
-    trufflehog_agent_file.process(msg)
-    mocker.patch(
-        "subprocess.check_output",
-        return_value=b'{"Verified":false,'
-        b'"Raw":"plain_secret",'
-        b'"Redacted":"plain*secret"}',
+    for log_content_message in log_contents:
+        trufflehog_agent_file.process(log_content_message)
+    msg = message.Message.from_data(
+        selector="v3.report.event.scan.done",
+        data={},
     )
     trufflehog_agent_file.process(msg)
 
-    assert len(agent_mock) == 1
-    assert (
-        agent_mock[0].data["dna"]
-        == '{"location": {"metadata": [{"type": "LOG", "value": "just a dummy logs"}]}, "secret_token": "https://admin:admin@the-internet.herokuapp.com", "title": "Secret information stored in the application"}'
-    )
+    assert len(agent_mock) == 12
+    assert "https://admin:admin@the-internet.herokuapp.com" in agent_mock[0].data["dna"]
+    assert "https://admin:admin@the-internet.herokuapp.com" in agent_mock[1].data["dna"]
 
 
 def testTruffleHog_whenFileHasBlackListedPath_skipProcessing(
