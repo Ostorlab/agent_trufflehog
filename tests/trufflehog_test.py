@@ -105,7 +105,7 @@ def testSubprocessParameter_whenProcessingLogs_beValid(
     assert args[0] == "trufflehog"
     assert args[1] == "filesystem"
     assert args[3] == "--json"
-    # Verify log was added 
+    # Verify log was added
     assert trufflehog_agent_file.set_add.call_count == 2  # Once for lock, once for log
 
 

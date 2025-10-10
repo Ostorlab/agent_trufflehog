@@ -125,7 +125,7 @@ class TruffleHogAgent(
     """
 
     def _process_logs(
-        self, log_content: str | None, force_process: bool = False
+        self, log_content: bytes | None, force_process: bool = False
     ) -> tuple[bytes | None, bytes | None]:
         """Process logs with Redis synchronization.
 
@@ -141,7 +141,7 @@ class TruffleHogAgent(
             if self.set_add(LOGS_LOCK_KEY, "locked"):
                 try:
                     if log_content is not None:
-                        self.set_add(LOGS_SET_KEY, log_content.encode("utf-8"))
+                        self.set_add(LOGS_SET_KEY, log_content)
 
                     if (
                         force_process is True
@@ -149,9 +149,7 @@ class TruffleHogAgent(
                     ):
                         logs = self.set_members(LOGS_SET_KEY)
                         if logs is not None and len(logs) > 0:
-                            combined_content = b"\n".join(
-                                [log for log in logs]
-                            )
+                            combined_content = b"\n".join([log for log in logs])
                             cmd_output = _process_file(combined_content)
                             self.delete(LOGS_SET_KEY)
                             return cmd_output, combined_content
