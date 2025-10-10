@@ -18,6 +18,8 @@ from rich import logging as rich_logging
 from ostorlab.assets import ios_store
 from ostorlab.assets import android_store
 from ostorlab.assets import domain_name
+from ostorlab.agent import definitions as agent_definitions
+from ostorlab.runtimes import definitions as runtime_definitions
 
 from agent import input_type_handler
 from agent import utils
@@ -125,6 +127,15 @@ class TruffleHogAgent(
     This class represents TruffleHog agent.
     this class uses the TruffleHog tool to scan files for secrets.
     """
+
+    def __init__(
+        self,
+        agent_definition: agent_definitions.AgentDefinition,
+        agent_settings: runtime_definitions.AgentSettings,
+    ) -> None:
+        """Construct necessary attributes of the TruffleHogAgent Agent instance."""
+        super().__init__(agent_definition, agent_settings)
+        agent_persist_mixin.AgentPersistMixin.__init__(self, agent_settings)
 
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(LOCK_RETRIES),
