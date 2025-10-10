@@ -4,6 +4,7 @@ import json
 import logging
 import subprocess
 import tempfile
+import time
 from typing import Any
 from urllib import parse
 
@@ -30,6 +31,11 @@ BLACKLISTED_FILE_TYPES = [
     "ipa",
     "irrelevant",
 ]
+LOGS_LOCK_KEY = "trufflehog_logs_lock"
+LOGS_SET_KEY = "trufflehog_logs"
+MAX_LOGS_BATCH_SIZE = 1000
+LOCK_RETRIES = 3
+LOCK_RETRY_DELAY = 2
 
 logging.basicConfig(
     format="%(message)s",
@@ -54,6 +60,7 @@ def _process_file(content: bytes) -> bytes | None:
 def _prepare_vulnerability_location(
     message: m.Message,
     file_path: str | None,
+    content: bytes,
 ) -> vuln_mixin.VulnerabilityLocation | None:
     """Prepare a `VulnerabilityLocation` instance with file path as vulnerability metadata and
     iOS/Android asset & their respective bundle-ID/package name as asset metadata.
@@ -73,15 +80,16 @@ def _prepare_vulnerability_location(
                     value=url,
                 )
             )
-    elif message.selector == "v3.capture.logs":
-        log = message.data.get("message")
-        if log is not None:
-            metadata.append(
-                vuln_mixin.VulnerabilityLocationMetadata(
-                    metadata_type=vuln_mixin.MetadataType.LOG,
-                    value=log,
-                )
+    elif (
+        message.selector == "v3.capture.logs"
+        or message.selector == "v3.report.event.scan.done"
+    ):
+        metadata.append(
+            vuln_mixin.VulnerabilityLocationMetadata(
+                metadata_type=vuln_mixin.MetadataType.LOG,
+                value=content.decode("utf-8"),
             )
+        )
 
     else:
         package_name = message.data.get("android_metadata", {}).get("package_name")
@@ -116,7 +124,51 @@ class TruffleHogAgent(
     this class uses the TruffleHog tool to scan files for secrets.
     """
 
-    def _report_vulnz(self, vulnz: list[dict[str, Any]], message: m.Message) -> None:
+    def _process_logs(
+        self, log_content: str | None, force_process: bool = False
+    ) -> (bytes | None, bytes | None):
+        """Process logs with Redis synchronization.
+
+        Args:
+            log_content: The log content to add (empty if forcing processing)
+            force_process: Whether to force processing regardless of batch size
+
+        Returns:
+            The scanner output if logs were processed, None otherwise
+        """
+        retries = LOCK_RETRIES
+        while retries > 0:
+            if self.set_add(LOGS_LOCK_KEY, "locked"):
+                try:
+                    if log_content is not None:
+                        self.set_add(LOGS_SET_KEY, log_content)
+
+                    if (
+                        force_process is True
+                        or self.set_len(LOGS_SET_KEY) >= MAX_LOGS_BATCH_SIZE
+                    ):
+                        logs = self.set_members(LOGS_SET_KEY)
+                        if logs is not None and len(logs) > 0:
+                            combined_content = b"\n".join(
+                                [log.encode("utf-8") for log in logs]
+                            )
+                            cmd_output = _process_file(combined_content)
+                            self.delete(LOGS_SET_KEY)
+                            return cmd_output, combined_content
+                    break
+                finally:
+                    self.delete(LOGS_LOCK_KEY)
+            else:
+                retries -= 1
+                time.sleep(LOCK_RETRY_DELAY)
+
+        if retries == 0:
+            logger.error("Failed to acquire lock after multiple retries")
+        return None, None
+
+    def _report_vulnz(
+        self, vulnz: list[dict[str, Any]], message: m.Message, content: bytes
+    ) -> None:
         for vuln in vulnz:
             secret_token = vuln.get("Raw") or vuln.get("Redacted")
             if secret_token is None:
@@ -128,13 +180,14 @@ class TruffleHogAgent(
             secret_type = vuln.get("DetectorName")
             if secret_type is not None:
                 technical_detail += f"""of type `{secret_type}` """
-            vulnerability_location = None
             path = message.data.get("path")
 
             if path is not None:
                 technical_detail += f"""found in file `{path}`."""
             vulnerability_location = _prepare_vulnerability_location(
-                message=message, file_path=path
+                message=message,
+                file_path=path,
+                content=content,
             )
 
             if vuln.get("Verified") is True:
@@ -179,6 +232,7 @@ class TruffleHogAgent(
         logger.debug("Processing input and Starting trufflehog.")
 
         cmd_output = None
+        combined_content = b""
         if message.selector.startswith("v3.asset.link"):
             link = message.data.get("url", "")
             link_type = input_type_handler.get_link_type(link)
@@ -198,7 +252,16 @@ class TruffleHogAgent(
             cmd_output = _process_file(content)
         elif message.selector.startswith("v3.capture.logs"):
             content = message.data.get("message", "")
-            cmd_output = _process_file(content.encode("utf-8"))
+            if content is not None:
+                cmd_output, combined_content = self._process_logs(
+                    content, force_process=False
+                )
+        elif message.selector == "v3.report.event.scan.done":
+            logger.info("Processing scan done message.")
+            cmd_output, combined_content = self._process_logs(
+                log_content=None, force_process=True
+            )
+
         elif message.selector.startswith("v3.capture.request_response"):
             response = message.data.get("response", {})
             request = message.data.get("request", {})
@@ -211,7 +274,7 @@ class TruffleHogAgent(
 
         secrets = self._process_scanner_output(cmd_output)
 
-        self._report_vulnz(secrets, message)
+        self._report_vulnz(secrets, message, combined_content)
 
 
 def _compute_dna(
