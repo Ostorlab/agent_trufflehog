@@ -91,9 +91,12 @@ def testSubprocessParameter_whenProcessingLogs_beValid(
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
+    """Test that logging processing triggers scanner when MAX_LOGS_BATCH_SIZE is reached."""
     subprocess_check_output_mock = mocker.patch(
         "subprocess.check_output", return_value=b""
     )
+    # Mock to trigger processing immediately
+    mocker.patch("agent.trufflehog_agent.MAX_LOGS_BATCH_SIZE", 1)
 
     trufflehog_agent_file.process(scan_message_logs)
     args = subprocess_check_output_mock.call_args[0][0]
@@ -102,6 +105,8 @@ def testSubprocessParameter_whenProcessingLogs_beValid(
     assert args[0] == "trufflehog"
     assert args[1] == "filesystem"
     assert args[3] == "--json"
+    # Verify log was added 
+    assert trufflehog_agent_file.set_add.call_count == 2  # Once for lock, once for log
 
 
 def testSubprocessParameter_whenProcessingRequestResponse_beValid(
