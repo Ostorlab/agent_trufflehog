@@ -334,9 +334,9 @@ def _sort_dict(dictionary: dict[str, Any] | list[Any]) -> dict[str, Any] | list[
     if isinstance(dictionary, list):
         return sorted(
             dictionary,
-            key=lambda x: json.dumps(x, sort_keys=True)
-            if isinstance(x, dict)
-            else str(x),
+            key=lambda x: (
+                json.dumps(x, sort_keys=True) if isinstance(x, dict) else str(x)
+            ),
         )
     return dictionary
 
