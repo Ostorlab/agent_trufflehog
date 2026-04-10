@@ -95,6 +95,18 @@ def apk_message_file() -> message.Message:
 
 
 @pytest.fixture
+def harmonyos_scan_message_file() -> message.Message:
+    """Creates a dummy message with HarmonyOS metadata for testing purposes."""
+    selector = "v3.asset.file"
+    msg_data = {
+        "content": b"some file content",
+        "path": "/tmp/path/file.txt",
+        "harmonyos_metadata": {"bundle_name": "a.b.c"},
+    }
+    return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
 def log_contents() -> list[message.Message]:
     """Creates log content messages."""
     messages = []

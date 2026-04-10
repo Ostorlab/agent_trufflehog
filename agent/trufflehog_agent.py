@@ -17,6 +17,7 @@ from ostorlab.agent.mixins import agent_report_vulnerability_mixin as vuln_mixin
 from rich import logging as rich_logging
 from ostorlab.assets import ios_store
 from ostorlab.assets import android_store
+from ostorlab.assets import harmonyos_store
 from ostorlab.assets import domain_name
 from ostorlab.agent import definitions as agent_definitions
 from ostorlab.runtimes import definitions as runtime_definitions
@@ -66,10 +67,14 @@ def _prepare_vulnerability_location(
     content: bytes | None,
 ) -> vuln_mixin.VulnerabilityLocation | None:
     """Prepare a `VulnerabilityLocation` instance with file path as vulnerability metadata and
-    iOS/Android asset & their respective bundle-ID/package name as asset metadata.
+    iOS/Android/HarmonyOS asset and their respective identifiers as asset metadata.
     """
     asset: (
-        domain_name.DomainName | ios_store.IOSStore | android_store.AndroidStore | None
+        domain_name.DomainName
+        | ios_store.IOSStore
+        | android_store.AndroidStore
+        | harmonyos_store.HarmonyOSStore
+        | None
     ) = None
     metadata = []
     if message.selector == "v3.asset.link":
@@ -98,12 +103,17 @@ def _prepare_vulnerability_location(
     else:
         package_name = message.data.get("android_metadata", {}).get("package_name")
         bundle_id = message.data.get("ios_metadata", {}).get("bundle_id")
-        if bundle_id is None and package_name is None:
+        harmony_bundle_name = message.data.get("harmonyos_metadata", {}).get(
+            "bundle_name"
+        )
+        if bundle_id is None and package_name is None and harmony_bundle_name is None:
             return None
         if bundle_id is not None:
             asset = ios_store.IOSStore(bundle_id=bundle_id)
         if package_name is not None:
             asset = android_store.AndroidStore(package_name=package_name)
+        if harmony_bundle_name is not None:
+            asset = harmonyos_store.HarmonyOSStore(bundle_name=harmony_bundle_name)
 
         metadata.append(
             vuln_mixin.VulnerabilityLocationMetadata(
