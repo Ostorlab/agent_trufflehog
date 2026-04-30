@@ -1,11 +1,11 @@
-FROM golang:1.24-alpine as scanner
+FROM golang:1.26-alpine as scanner
 RUN mkdir /install
 WORKDIR /install
 RUN apk add git
 RUN git clone https://github.com/trufflesecurity/trufflehog.git trufflehog 
 RUN cd trufflehog ; go build -o trufflehog
 
-FROM python:3.11-alpine as base
+FROM python:3.14-alpine as base
 FROM base as builder
 RUN apk add build-base
 RUN mkdir /install
@@ -25,4 +25,4 @@ ENV PYTHONPATH=/app
 COPY agent /app/agent
 COPY ostorlab.yaml /app/agent/ostorlab.yaml
 WORKDIR /app
-CMD ["python3", "/app/agent/trufflehog_agent.py"]
+CMD ["python", "/app/agent/trufflehog_agent.py"]
