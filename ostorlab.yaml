@@ -46,6 +46,7 @@ description: |
       ```
 in_selectors:
   - v3.asset.file
+  - v3.asset.repository
   - v3.asset.link
   - v3.capture.logs
   - v3.capture.request_response
@@ -54,3 +55,7 @@ out_selectors:
   - v3.report.vulnerability
 docker_file_path : Dockerfile # Dockerfile path for automated release build.
 docker_build_root : . # Docker build dir for automated release build.
+volumes:
+  - name: repository_code
+    path: /code
+    read_only: true
