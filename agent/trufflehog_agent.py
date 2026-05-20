@@ -2,6 +2,7 @@
 
 import json
 import logging
+import pathlib
 import subprocess
 import tempfile
 
@@ -19,6 +20,7 @@ from ostorlab.assets import ios_store
 from ostorlab.assets import android_store
 from ostorlab.assets import harmonyos_store
 from ostorlab.assets import domain_name
+from ostorlab.assets import repository as repository_asset
 from ostorlab.agent import definitions as agent_definitions
 from ostorlab.runtimes import definitions as runtime_definitions
 
@@ -40,6 +42,7 @@ LOGS_SET_KEY = "trufflehog_logs"
 MAX_LOGS_BATCH_SIZE = 1000
 LOCK_RETRIES = 3
 LOCK_RETRY_DELAY = 2
+REPOSITORY_CODE_PATH = "/code"
 
 logging.basicConfig(
     format="%(message)s",
@@ -74,10 +77,23 @@ def _prepare_vulnerability_location(
         | ios_store.IOSStore
         | android_store.AndroidStore
         | harmonyos_store.HarmonyOSStore
+        | repository_asset.Repository
         | None
     ) = None
     metadata = []
-    if message.selector == "v3.asset.link":
+    if message.selector == "v3.asset.repository":
+        asset = repository_asset.Repository(
+            repository_url=str(message.data.get("repository_url") or ""),
+            commit_hash=str(message.data.get("commit_hash") or ""),
+        )
+        if file_path is not None:
+            metadata.append(
+                vuln_mixin.VulnerabilityLocationMetadata(
+                    metadata_type=vuln_mixin.MetadataType.FILE_PATH,
+                    value=file_path,
+                )
+            )
+    elif message.selector == "v3.asset.link":
         url = message.data.get("url")
         url_netloc = parse.urlparse(url).netloc
         asset = domain_name.DomainName(name=str(url_netloc))
@@ -126,6 +142,24 @@ def _prepare_vulnerability_location(
         asset=asset,
         metadata=metadata,
     )
+
+
+def _get_repository_file_path(vuln: dict[str, Any]) -> str | None:
+    """Extract the file path TruffleHog reports for a repository finding."""
+    source_data = vuln.get("SourceMetadata", {}).get("Data", {})
+    source_details = source_data.get("Filesystem")
+    if isinstance(source_details, dict) is False:
+        return None
+    file_path = source_details.get("file")
+    if isinstance(file_path, str) is True and file_path != "":
+        path = pathlib.Path(file_path)
+        if path.is_absolute() is True:
+            try:
+                return str(path.relative_to(REPOSITORY_CODE_PATH)) or None
+            except ValueError:
+                return str(file_path) if file_path is True else None
+        return str(file_path) if file_path is True else None
+    return None
 
 
 class TruffleHogAgent(
@@ -206,6 +240,8 @@ class TruffleHogAgent(
             if secret_type is not None:
                 technical_detail += f"""of type `{secret_type}` """
             path = message.data.get("path")
+            if message.selector == "v3.asset.repository":
+                path = _get_repository_file_path(vuln)
 
             if path is not None:
                 technical_detail += f"""found in file `{path}`."""
@@ -265,6 +301,20 @@ class TruffleHogAgent(
                 return
             logger.info("Processing link %s of type %s", link, link_type)
             cmd_output = self.run_scanner(link_type, link)
+        elif message.selector == "v3.asset.repository":
+            repository_path = pathlib.Path(REPOSITORY_CODE_PATH)
+            if repository_path.is_dir() is False:
+                logger.error(
+                    "Repository path %s is not available. Ensure shared volume is mounted.",
+                    REPOSITORY_CODE_PATH,
+                )
+                return
+            logger.info(
+                "Processing repository %s from %s",
+                message.data.get("repository_url", ""),
+                REPOSITORY_CODE_PATH,
+            )
+            cmd_output = self.run_scanner("filesystem", REPOSITORY_CODE_PATH)
         elif message.selector.startswith("v3.asset.file"):
             path = message.data.get("path", "")
             content = message.data.get("content", b"")

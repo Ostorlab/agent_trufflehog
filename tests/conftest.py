@@ -31,6 +31,17 @@ def scan_message_gihub_without_key() -> message.Message:
 
 
 @pytest.fixture
+def repository_asset_message() -> message.Message:
+    """Creates a repository asset message for shared-volume repository scanning."""
+    selector = "v3.asset.repository"
+    msg_data = {
+        "repository_url": "https://github.com/org/repo.git",
+        "commit_hash": "a1a10cdbc6551ba359169a3033f193b7f8c1b95d",
+    }
+    return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
 def scan_message_logs() -> message.Message:
     """Creates a dummy message of type v3.capture.logs to be used by the agent for testing purposes."""
     selector = "v3.capture.logs"

@@ -1,6 +1,7 @@
 """Unittest for truflehog agent."""
 
 import logging
+import pathlib
 
 import pytest
 from ostorlab.agent.message import message
@@ -144,6 +145,31 @@ def testSubprocessParameter_whenProcessingLink_beValid(
     assert len(args) == 4
     assert args[0] == "trufflehog"
     assert args[1] == "git"
+    assert args[3] == "--json"
+
+
+def testSubprocessParameter_whenProcessingRepository_beValid(
+    repository_asset_message: message.Message,
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    mocker.patch("agent.trufflehog_agent.REPOSITORY_CODE_PATH", str(shared_code_path))
+
+    trufflehog_agent_file.process(repository_asset_message)
+    args = subprocess_check_output_mock.call_args[0][0]
+
+    assert len(args) == 4
+    assert args[0] == "trufflehog"
+    assert args[1] == "filesystem"
+    assert args[2] == str(shared_code_path)
     assert args[3] == "--json"
 
 
@@ -435,3 +461,43 @@ def testTruffleHog_whenFileHasBlackListedPath_skipProcessing(
     trufflehog_agent_file.process(msg)
 
     assert len(agent_mock) == 0
+
+
+def testTruffleHog_whenRepositoryHasFinding_reportVulnerabilitiesWithRepositoryMetadata(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    repository_asset_message: message.Message,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    """Ensure repository assets emit vulnerabilities with repository location."""
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    secret_file_path = shared_code_path / "src" / "secrets.env"
+    secret_file_path.parent.mkdir()
+    secret_file_path.write_text("SECRET=value", encoding="utf-8")
+
+    mocker.patch("agent.trufflehog_agent.REPOSITORY_CODE_PATH", str(shared_code_path))
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"SourceMetadata":{"Data":{"Filesystem":{"file":"'
+        + str(secret_file_path).encode()
+        + b'"}}},"DetectorName":"URI","Verified":true,'
+        + b'"Raw":"https://admin:admin@the-internet.herokuapp.com",'
+        b'"Redacted":"https://********:********@the-internet.herokuapp.com"}',
+    )
+
+    trufflehog_agent_file.process(repository_asset_message)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].selector == "v3.report.vulnerability"
+    vulnerability = agent_mock[0].data
+    assert vulnerability["risk_rating"] == "HIGH"
+    assert vulnerability["vulnerability_location"]["repository"] == {
+        "repository_url": "https://github.com/org/repo.git",
+        "commit_hash": "a1a10cdbc6551ba359169a3033f193b7f8c1b95d",
+    }
+    assert vulnerability["vulnerability_location"]["metadata"] == [
+        {"type": "FILE_PATH", "value": "src/secrets.env"}
+    ]
