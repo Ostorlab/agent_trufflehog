@@ -1,6 +1,7 @@
 """Unittest for truflehog agent."""
 
 import logging
+import pathlib
 
 import pytest
 from ostorlab.agent.message import message
@@ -153,7 +154,7 @@ def testSubprocessParameter_whenProcessingRepository_beValid(
     agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
-    tmp_path,
+    tmp_path: pathlib.Path,
 ) -> None:
     subprocess_check_output_mock = mocker.patch(
         "subprocess.check_output", return_value=b""
@@ -468,7 +469,7 @@ def testTruffleHog_whenRepositoryHasFinding_reportVulnerabilitiesWithRepositoryM
     agent_persist_mock: dict[str | bytes, str | bytes],
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
-    tmp_path,
+    tmp_path: pathlib.Path,
 ) -> None:
     """Ensure repository assets emit vulnerabilities with repository location."""
     shared_code_path = tmp_path / "code"

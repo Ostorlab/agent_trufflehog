@@ -155,10 +155,10 @@ def _get_repository_file_path(vuln: dict[str, Any]) -> str | None:
         path = pathlib.Path(file_path)
         if path.is_absolute() is True:
             try:
-                return str(path.relative_to(REPOSITORY_CODE_PATH))
+                return str(path.relative_to(REPOSITORY_CODE_PATH)) or None
             except ValueError:
-                return file_path
-        return file_path
+                return str(file_path) if file_path is True else None
+        return str(file_path) if file_path is True else None
     return None
 
 
