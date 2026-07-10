@@ -47,11 +47,6 @@ REPOSITORY_SELECTOR = "v3.asset.repository"
 REPOSITORY_ARCHIVE_SELECTOR = "v3.asset.file.repository_archive"
 
 
-def _is_repository_selector(selector: str) -> bool:
-    """Whether the selector should be scanned as a repository from the shared `/code` volume."""
-    return selector in (REPOSITORY_SELECTOR, REPOSITORY_ARCHIVE_SELECTOR)
-
-
 logging.basicConfig(
     format="%(message)s",
     datefmt="[%X]",
@@ -89,7 +84,10 @@ def _prepare_vulnerability_location(
         | None
     ) = None
     metadata = []
-    if _is_repository_selector(message.selector):
+    if (
+        message.selector == REPOSITORY_SELECTOR
+        or message.selector == REPOSITORY_ARCHIVE_SELECTOR
+    ):
         asset = repository_asset.Repository(
             repository_url=str(message.data.get("repository_url") or ""),
             commit_hash=str(message.data.get("commit_hash") or ""),
@@ -249,7 +247,10 @@ class TruffleHogAgent(
             if secret_type is not None:
                 technical_detail += f"""of type `{secret_type}` """
             path = message.data.get("path")
-            if _is_repository_selector(message.selector):
+            if (
+                message.selector == REPOSITORY_SELECTOR
+                or message.selector == REPOSITORY_ARCHIVE_SELECTOR
+            ):
                 path = _get_repository_file_path(vuln)
 
             if path is not None:
@@ -310,7 +311,10 @@ class TruffleHogAgent(
                 return
             logger.info("Processing link %s of type %s", link, link_type)
             cmd_output = self.run_scanner(link_type, link)
-        elif _is_repository_selector(message.selector):
+        elif (
+            message.selector == REPOSITORY_SELECTOR
+            or message.selector == REPOSITORY_ARCHIVE_SELECTOR
+        ):
             repository_path = pathlib.Path(REPOSITORY_CODE_PATH)
             if repository_path.is_dir() is False:
                 logger.error(
