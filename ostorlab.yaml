@@ -1,6 +1,6 @@
 kind: Agent
 name: trufflehog
-version: 1.0.1
+version: 1.0.2
 description: |
   This repository is an implementation of [OXO Agent](https://pypi.org/project/ostorlab/) for the [trufflehog tool] https://github.com/trufflesecurity/trufflehog by trufflesecurity.
 
@@ -46,6 +46,7 @@ description: |
       ```
 in_selectors:
   - v3.asset.file
+  - v3.asset.file.repository_archive
   - v3.asset.repository
   - v3.asset.link
   - v3.capture.logs
