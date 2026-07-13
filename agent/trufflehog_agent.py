@@ -21,6 +21,7 @@ from ostorlab.assets import android_store
 from ostorlab.assets import harmonyos_store
 from ostorlab.assets import domain_name
 from ostorlab.assets import repository as repository_asset
+from ostorlab.assets import repository_archive as repository_archive_asset
 from ostorlab.agent import definitions as agent_definitions
 from ostorlab.runtimes import definitions as runtime_definitions
 
@@ -81,13 +82,25 @@ def _prepare_vulnerability_location(
         | android_store.AndroidStore
         | harmonyos_store.HarmonyOSStore
         | repository_asset.Repository
+        | repository_archive_asset.RepositoryArchive
         | None
     ) = None
     metadata = []
-    if (
-        message.selector == REPOSITORY_SELECTOR
-        or message.selector == REPOSITORY_ARCHIVE_SELECTOR
-    ):
+    if message.selector == REPOSITORY_ARCHIVE_SELECTOR:
+        content_url = message.data.get("content_url")
+        if content_url is None:
+            return None
+        asset = repository_archive_asset.RepositoryArchive(
+            content_url=str(content_url),
+        )
+        if file_path is not None:
+            metadata.append(
+                vuln_mixin.VulnerabilityLocationMetadata(
+                    metadata_type=vuln_mixin.MetadataType.FILE_PATH,
+                    value=file_path,
+                )
+            )
+    elif message.selector == REPOSITORY_SELECTOR:
         asset = repository_asset.Repository(
             repository_url=str(message.data.get("repository_url") or ""),
             commit_hash=str(message.data.get("commit_hash") or ""),
@@ -162,10 +175,10 @@ def _get_repository_file_path(vuln: dict[str, Any]) -> str | None:
         path = pathlib.Path(file_path)
         if path.is_absolute() is True:
             try:
-                return str(path.relative_to(REPOSITORY_CODE_PATH)) or None
+                return str(path.relative_to(REPOSITORY_CODE_PATH))
             except ValueError:
-                return str(file_path) if file_path is True else None
-        return str(file_path) if file_path is True else None
+                return str(file_path)
+        return str(file_path)
     return None
 
 
@@ -323,8 +336,8 @@ class TruffleHogAgent(
                 )
                 return
             logger.info(
-                "Processing repository %s from %s",
-                message.data.get("repository_url", ""),
+                "Processing %s asset from %s",
+                message.selector,
                 REPOSITORY_CODE_PATH,
             )
             cmd_output = self.run_scanner("filesystem", REPOSITORY_CODE_PATH)
