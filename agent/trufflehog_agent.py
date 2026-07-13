@@ -177,8 +177,8 @@ def _get_repository_file_path(vuln: dict[str, Any]) -> str | None:
             try:
                 return str(path.relative_to(REPOSITORY_CODE_PATH))
             except ValueError:
-                return file_path
-        return file_path
+                return str(file_path)
+        return str(file_path)
     return None
 
 
