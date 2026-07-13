@@ -44,19 +44,17 @@ def repository_asset_message() -> message.Message:
 
 @pytest.fixture
 def repository_archive_asset_message() -> message.Message:
-    """Creates a repository archive file asset message for shared-volume repository scanning.
-
-    The message is built directly instead of via `Message.from_data` because the
-    `v3.asset.file.repository_archive` proto is not yet shipped in `ostorlab`; the agent
-    only reads `selector` and `data`, so the raw bytes are not needed for these tests.
-    """
+    """Creates a repository archive asset message for shared-volume repository scanning."""
     selector = "v3.asset.file.repository_archive"
-    msg_data = {
-        "repository_url": "https://github.com/org/repo.git",
-        "commit_hash": "a1a10cdbc6551ba359169a3033f193b7f8c1b95d",
-        "provider": "GITHUB",
-    }
-    return message.Message(selector=selector, data=msg_data, raw=b"")
+    msg_data = {"content_url": "https://github.com/org/repo/archive/main.zip"}
+    return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
+def repository_archive_asset_message_without_content_url() -> message.Message:
+    """Creates a malformed repository archive asset message, missing its `content_url`."""
+    selector = "v3.asset.file.repository_archive"
+    return message.Message.from_data(selector, data={})
 
 
 @pytest.fixture
