@@ -1,9 +1,35 @@
 """Helper functions for the Trufflehog agent"""
 
 import json
+import logging
 from typing import Any
 
 import magic
+
+logger = logging.getLogger(__name__)
+
+
+def should_exclude_path(path: str | None, exclude_paths: list[str] | None) -> bool:
+    """Report whether a file path starts with one of the excluded prefixes.
+
+    Args:
+        path: The file path reported in the message, or None.
+        exclude_paths: List of path prefixes to match against the path.
+
+    Returns:
+        True if the path starts with at least one prefix and should be skipped,
+        False otherwise.
+    """
+    if path is None or exclude_paths is None or len(exclude_paths) == 0:
+        return False
+    for prefix in exclude_paths:
+        if path.startswith(prefix) is True:
+            logger.info(
+                "Skipping file %s: path matches exclude prefix %r.", path, prefix
+            )
+            return True
+    return False
+
 
 IRRELEVANT_FILE_PATHS = [
     "res/color",
