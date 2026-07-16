@@ -55,7 +55,7 @@ in_selectors:
 out_selectors:
   - v3.report.vulnerability
 args:
-  - name: "exclude_paths"
+  - name: "exclude_path_regexes"
     type: "array"
     description: "List of regex patterns; files whose path matches any pattern are skipped."
 docker_file_path : Dockerfile # Dockerfile path for automated release build.

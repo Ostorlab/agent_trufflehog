@@ -343,7 +343,10 @@ class TruffleHogAgent(
             cmd_output = self.run_scanner("filesystem", REPOSITORY_CODE_PATH)
         elif message.selector.startswith("v3.asset.file"):
             path = message.data.get("path", "")
-            if utils.should_exclude_path(path, self.args.get("exclude_paths")) is True:
+            if (
+                utils.should_exclude_path(path, self.args.get("exclude_path_regexes"))
+                is True
+            ):
                 return
             content = message.data.get("content", b"")
             file_type = utils.get_file_type(filename=path, file_content=content)
