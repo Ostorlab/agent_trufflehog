@@ -600,3 +600,22 @@ def testTruffleHog_whenRepositoryArchiveHasNoContentUrl_reportVulnerabilitiesWit
 
     assert len(agent_mock) == 1
     assert agent_mock[0].data.get("vulnerability_location") is None
+
+
+def testTruffleHog_whenFilePathIsExcluded_notProcessMessage(
+    trufflehog_agent_file_with_exclude_paths: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """A file whose path matches an exclude pattern is skipped: no scan, no emitted message."""
+    subprocess_mock = mocker.patch("subprocess.check_output")
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={"content": b"some file content", "path": "/workspace/file.txt"},
+    )
+
+    trufflehog_agent_file_with_exclude_paths.process(msg)
+
+    assert subprocess_mock.call_count == 0
+    assert len(agent_mock) == 0

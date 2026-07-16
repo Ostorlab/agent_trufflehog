@@ -112,6 +112,31 @@ def trufflehog_agent_file(
     return agent_object
 
 
+@pytest.fixture()
+def trufflehog_agent_file_with_exclude_paths(
+    agent_persist_mock: Dict[str | bytes, str | bytes],
+) -> trufflehog_agent.TruffleHogAgent:
+    """TruffleHog agent configured to exclude files under /workspace."""
+    with (pathlib.Path(__file__).parent.parent / "ostorlab.yaml").open() as yaml_o:
+        definition = agent_definitions.AgentDefinition.from_yaml(yaml_o)
+        settings = runtime_definitions.AgentSettings(
+            key="agent/ostorlab/trufflehog",
+            bus_url="NA",
+            bus_exchange_topic="NA",
+            args=[
+                {
+                    "name": "exclude_paths",
+                    "type": "array",
+                    "value": [r"^/workspace(/|$)"],
+                }
+            ],
+            healthcheck_port=random.randint(5000, 6000),
+            redis_url="redis://guest:guest@localhost:6379",
+        )
+        agent_object = trufflehog_agent.TruffleHogAgent(definition, settings)
+    return agent_object
+
+
 @pytest.fixture
 def apk_message_file() -> message.Message:
     """Creates a dummy message of type v3.asset.file that wraps an apk file."""
