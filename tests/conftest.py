@@ -2,6 +2,7 @@
 conftest for trufflehog agent tests
 """
 
+import json
 import pytest
 import random
 import pathlib
@@ -10,6 +11,7 @@ from typing import Dict
 from ostorlab.agent.message import message
 from ostorlab.agent import definitions as agent_definitions
 from ostorlab.runtimes import definitions as runtime_definitions
+from ostorlab.utils import definitions as utils_definitions
 from agent import trufflehog_agent
 
 
@@ -105,6 +107,31 @@ def trufflehog_agent_file(
             bus_url="NA",
             bus_exchange_topic="NA",
             args=[],
+            healthcheck_port=random.randint(5000, 6000),
+            redis_url="redis://guest:guest@localhost:6379",
+        )
+        agent_object = trufflehog_agent.TruffleHogAgent(definition, settings)
+    return agent_object
+
+
+@pytest.fixture()
+def trufflehog_agent_file_with_exclude_path_regexes(
+    agent_persist_mock: Dict[str | bytes, str | bytes],
+) -> trufflehog_agent.TruffleHogAgent:
+    """TruffleHog agent configured to exclude files under /workspace."""
+    with (pathlib.Path(__file__).parent.parent / "ostorlab.yaml").open() as yaml_o:
+        definition = agent_definitions.AgentDefinition.from_yaml(yaml_o)
+        settings = runtime_definitions.AgentSettings(
+            key="agent/ostorlab/trufflehog",
+            bus_url="NA",
+            bus_exchange_topic="NA",
+            args=[
+                utils_definitions.Arg(
+                    name="exclude_path_regexes",
+                    type="array",
+                    value=json.dumps([r"^/workspace(/|$)"]).encode(),
+                )
+            ],
             healthcheck_port=random.randint(5000, 6000),
             redis_url="redis://guest:guest@localhost:6379",
         )
