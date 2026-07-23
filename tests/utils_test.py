@@ -201,3 +201,67 @@ def testShouldExcludePath_whenRegexIsInvalid_shouldSkipPatternAndReturnFalse() -
     result = utils.should_exclude_path("/workspace/a.py", ["[invalid("])
 
     assert result is False
+
+
+def testBuildRepositoryAssetDirectory_whenGitUrl_returnsNameAndCommitHash() -> None:
+    """A `.git` repository URL yields `<repository_name>_<commit_hash>`."""
+    result = utils.build_repository_asset_directory(
+        "https://github.com/Ostorlab/agent_trufflehog.git",
+        "a1a10cdbc6551ba359169a3033f193b7f8c1b95d",
+    )
+
+    assert result == "agent_trufflehog_a1a10cdbc6551ba359169a3033f193b7f8c1b95d"
+
+
+def testBuildRepositoryAssetDirectory_whenUrlWithoutGitSuffix_returnsNameAndCommitHash() -> (
+    None
+):
+    """A repository URL without a `.git` suffix still yields the bare repository name."""
+    result = utils.build_repository_asset_directory(
+        "https://github.com/Ostorlab/agent_trufflehog",
+        "abc123",
+    )
+
+    assert result == "agent_trufflehog_abc123"
+
+
+def testBuildRepositoryAssetDirectory_whenTrailingSlash_returnsNameAndCommitHash() -> (
+    None
+):
+    """A trailing slash on the repository URL does not leak into the folder name."""
+    result = utils.build_repository_asset_directory(
+        "https://github.com/Ostorlab/agent_trufflehog.git/",
+        "abc123",
+    )
+
+    assert result == "agent_trufflehog_abc123"
+
+
+def testBuildRepositoryArchiveAssetDirectory_returnsLastPathSegment() -> None:
+    """The archive directory is the last path segment of the content URL."""
+    result = utils.build_repository_archive_asset_directory(
+        "https://storage.googleapis.com/ostorlabapps/uploads/"
+        "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+    )
+
+    assert result == "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+
+
+def testBuildRepositoryArchiveAssetDirectory_whenQueryParams_ignoresQuery() -> None:
+    """Query parameters on the content URL are ignored when deriving the directory."""
+    result = utils.build_repository_archive_asset_directory(
+        "https://storage.googleapis.com/uploads/abc-123?token=secret&expiry=1"
+    )
+
+    assert result == "abc-123"
+
+
+def testBuildRepositoryArchiveAssetDirectory_whenTrailingSlash_returnsLastSegment() -> (
+    None
+):
+    """A trailing slash does not produce an empty segment."""
+    result = utils.build_repository_archive_asset_directory(
+        "https://storage.googleapis.com/uploads/abc-123/"
+    )
+
+    assert result == "abc-123"

@@ -161,7 +161,10 @@ def testSubprocessParameter_whenProcessingRepository_beValid(
     )
     shared_code_path = tmp_path / "code"
     shared_code_path.mkdir()
-    mocker.patch("agent.trufflehog_agent.REPOSITORY_CODE_PATH", str(shared_code_path))
+    asset_directory = "repo_a1a10cdbc6551ba359169a3033f193b7f8c1b95d"
+    asset_path = shared_code_path / asset_directory
+    asset_path.mkdir()
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
 
     trufflehog_agent_file.process(repository_asset_message)
     args = subprocess_check_output_mock.call_args[0][0]
@@ -169,7 +172,7 @@ def testSubprocessParameter_whenProcessingRepository_beValid(
     assert len(args) == 4
     assert args[0] == "trufflehog"
     assert args[1] == "filesystem"
-    assert args[2] == str(shared_code_path)
+    assert args[2] == str(asset_path)
     assert args[3] == "--json"
 
 
@@ -474,11 +477,13 @@ def testTruffleHog_whenRepositoryHasFinding_reportVulnerabilitiesWithRepositoryM
     """Ensure repository assets emit vulnerabilities with repository location."""
     shared_code_path = tmp_path / "code"
     shared_code_path.mkdir()
-    secret_file_path = shared_code_path / "src" / "secrets.env"
-    secret_file_path.parent.mkdir()
+    asset_directory = "repo_a1a10cdbc6551ba359169a3033f193b7f8c1b95d"
+    asset_path = shared_code_path / asset_directory
+    secret_file_path = asset_path / "src" / "secrets.env"
+    secret_file_path.parent.mkdir(parents=True)
     secret_file_path.write_text("SECRET=value", encoding="utf-8")
 
-    mocker.patch("agent.trufflehog_agent.REPOSITORY_CODE_PATH", str(shared_code_path))
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
     mocker.patch(
         "subprocess.check_output",
         return_value=b'{"SourceMetadata":{"Data":{"Filesystem":{"file":"'
@@ -512,13 +517,16 @@ def testSubprocessParameter_whenProcessingRepositoryArchive_beValid(
     agent_mock: list[message.Message],
     tmp_path: pathlib.Path,
 ) -> None:
-    """Ensure a repository archive asset is scanned from the shared `/code` volume."""
+    """Ensure a repository archive asset is scanned from its extracted asset directory."""
     subprocess_check_output_mock = mocker.patch(
         "subprocess.check_output", return_value=b""
     )
     shared_code_path = tmp_path / "code"
     shared_code_path.mkdir()
-    mocker.patch("agent.trufflehog_agent.REPOSITORY_CODE_PATH", str(shared_code_path))
+    asset_directory = "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+    asset_path = shared_code_path / asset_directory
+    asset_path.mkdir()
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
 
     trufflehog_agent_file.process(repository_archive_asset_message)
     args = subprocess_check_output_mock.call_args[0][0]
@@ -526,7 +534,7 @@ def testSubprocessParameter_whenProcessingRepositoryArchive_beValid(
     assert len(args) == 4
     assert args[0] == "trufflehog"
     assert args[1] == "filesystem"
-    assert args[2] == str(shared_code_path)
+    assert args[2] == str(asset_path)
     assert args[3] == "--json"
 
 
@@ -541,11 +549,13 @@ def testTruffleHog_whenRepositoryArchiveHasFinding_reportVulnerabilitiesWithRepo
     """Ensure repository archive assets emit vulnerabilities with a repository archive location."""
     shared_code_path = tmp_path / "code"
     shared_code_path.mkdir()
-    secret_file_path = shared_code_path / "src" / "secrets.env"
-    secret_file_path.parent.mkdir()
+    asset_directory = "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+    asset_path = shared_code_path / asset_directory
+    secret_file_path = asset_path / "src" / "secrets.env"
+    secret_file_path.parent.mkdir(parents=True)
     secret_file_path.write_text("SECRET=value", encoding="utf-8")
 
-    mocker.patch("agent.trufflehog_agent.REPOSITORY_CODE_PATH", str(shared_code_path))
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
     mocker.patch(
         "subprocess.check_output",
         return_value=b'{"SourceMetadata":{"Data":{"Filesystem":{"file":"'
@@ -562,7 +572,10 @@ def testTruffleHog_whenRepositoryArchiveHasFinding_reportVulnerabilitiesWithRepo
     vulnerability = agent_mock[0].data
     assert vulnerability["risk_rating"] == "HIGH"
     assert vulnerability["vulnerability_location"]["repository_archive"] == {
-        "content_url": "https://github.com/org/repo/archive/main.zip"
+        "content_url": (
+            "https://storage.googleapis.com/ostorlabapps/uploads/"
+            "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+        )
     }
     assert vulnerability["vulnerability_location"].get("repository") is None
     assert vulnerability["vulnerability_location"]["metadata"] == [
@@ -583,10 +596,10 @@ def testTruffleHog_whenRepositoryArchiveHasNoContentUrl_reportVulnerabilitiesWit
     shared_code_path = tmp_path / "code"
     shared_code_path.mkdir()
     secret_file_path = shared_code_path / "src" / "secrets.env"
-    secret_file_path.parent.mkdir()
+    secret_file_path.parent.mkdir(parents=True)
     secret_file_path.write_text("SECRET=value", encoding="utf-8")
 
-    mocker.patch("agent.trufflehog_agent.REPOSITORY_CODE_PATH", str(shared_code_path))
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
     mocker.patch(
         "subprocess.check_output",
         return_value=b'{"SourceMetadata":{"Data":{"Filesystem":{"file":"'
