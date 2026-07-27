@@ -3,15 +3,15 @@ conftest for trufflehog agent tests
 """
 
 import json
-import pytest
-import random
 import pathlib
-from typing import Dict
+import random
 
-from ostorlab.agent.message import message
+import pytest
 from ostorlab.agent import definitions as agent_definitions
+from ostorlab.agent.message import message
 from ostorlab.runtimes import definitions as runtime_definitions
 from ostorlab.utils import definitions as utils_definitions
+
 from agent import trufflehog_agent
 
 
@@ -103,7 +103,7 @@ def scan_message_request_response() -> message.Message:
 
 @pytest.fixture()
 def trufflehog_agent_file(
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
 ) -> trufflehog_agent.TruffleHogAgent:
     with (pathlib.Path(__file__).parent.parent / "ostorlab.yaml").open() as yaml_o:
         definition = agent_definitions.AgentDefinition.from_yaml(yaml_o)
@@ -121,7 +121,7 @@ def trufflehog_agent_file(
 
 @pytest.fixture()
 def trufflehog_agent_file_with_exclude_path_regexes(
-    agent_persist_mock: Dict[str | bytes, str | bytes],
+    agent_persist_mock: dict[str | bytes, str | bytes],
 ) -> trufflehog_agent.TruffleHogAgent:
     """TruffleHog agent configured to exclude files under /workspace."""
     with (pathlib.Path(__file__).parent.parent / "ostorlab.yaml").open() as yaml_o:

@@ -203,9 +203,9 @@ def testShouldExcludePath_whenRegexIsInvalid_shouldSkipPatternAndReturnFalse() -
     assert result is False
 
 
-def testBuildRepositoryAssetDirectory_whenGitUrl_returnsNameAndCommitHash() -> None:
+def testConstructRepositoryAssetDirectory_whenGitUrl_returnsNameAndCommitHash() -> None:
     """A `.git` repository URL yields `<repository_name>_<commit_hash>`."""
-    result = utils.build_repository_asset_directory(
+    result = utils.construct_repository_asset_directory(
         "https://github.com/Ostorlab/agent_trufflehog.git",
         "a1a10cdbc6551ba359169a3033f193b7f8c1b95d",
     )
@@ -213,11 +213,11 @@ def testBuildRepositoryAssetDirectory_whenGitUrl_returnsNameAndCommitHash() -> N
     assert result == "agent_trufflehog_a1a10cdbc6551ba359169a3033f193b7f8c1b95d"
 
 
-def testBuildRepositoryAssetDirectory_whenUrlWithoutGitSuffix_returnsNameAndCommitHash() -> (
+def testConstructRepositoryAssetDirectory_whenUrlWithoutGitSuffix_returnsNameAndCommitHash() -> (
     None
 ):
     """A repository URL without a `.git` suffix still yields the bare repository name."""
-    result = utils.build_repository_asset_directory(
+    result = utils.construct_repository_asset_directory(
         "https://github.com/Ostorlab/agent_trufflehog",
         "abc123",
     )
@@ -225,11 +225,11 @@ def testBuildRepositoryAssetDirectory_whenUrlWithoutGitSuffix_returnsNameAndComm
     assert result == "agent_trufflehog_abc123"
 
 
-def testBuildRepositoryAssetDirectory_whenTrailingSlash_returnsNameAndCommitHash() -> (
+def testConstructRepositoryAssetDirectory_whenTrailingSlash_returnsNameAndCommitHash() -> (
     None
 ):
     """A trailing slash on the repository URL does not leak into the folder name."""
-    result = utils.build_repository_asset_directory(
+    result = utils.construct_repository_asset_directory(
         "https://github.com/Ostorlab/agent_trufflehog.git/",
         "abc123",
     )
@@ -237,9 +237,20 @@ def testBuildRepositoryAssetDirectory_whenTrailingSlash_returnsNameAndCommitHash
     assert result == "agent_trufflehog_abc123"
 
 
-def testBuildRepositoryArchiveAssetDirectory_returnsLastPathSegment() -> None:
-    """The archive directory is the last path segment of the content URL."""
-    result = utils.build_repository_archive_asset_directory(
+def testConstructRepositoryAssetDirectory_whenRepositoryNameCannotBeDerived_returnsEmptyString() -> (
+    None
+):
+    """A URL with no derivable repository name yields an empty string."""
+    result = utils.construct_repository_asset_directory(
+        "https://example.com/", "abc123"
+    )
+
+    assert result == ""
+
+
+def testConstructRepositoryArchiveAssetDirectory_returnsSegmentAfterUploads() -> None:
+    """The archive directory is the path segment immediately after `uploads`."""
+    result = utils.construct_repository_archive_asset_directory(
         "https://storage.googleapis.com/ostorlabapps/uploads/"
         "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
     )
@@ -247,21 +258,43 @@ def testBuildRepositoryArchiveAssetDirectory_returnsLastPathSegment() -> None:
     assert result == "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
 
 
-def testBuildRepositoryArchiveAssetDirectory_whenQueryParams_ignoresQuery() -> None:
+def testConstructRepositoryArchiveAssetDirectory_whenUploadsFollowedByPath_returnsUuid() -> (
+    None
+):
+    """Only the segment after `uploads` is kept, later path segments are ignored."""
+    result = utils.construct_repository_archive_asset_directory(
+        "https://example.com/uploads/cc3714/archive/main.zip"
+    )
+
+    assert result == "cc3714"
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenQueryParams_ignoresQuery() -> None:
     """Query parameters on the content URL are ignored when deriving the directory."""
-    result = utils.build_repository_archive_asset_directory(
+    result = utils.construct_repository_archive_asset_directory(
         "https://storage.googleapis.com/uploads/abc-123?token=secret&expiry=1"
     )
 
     assert result == "abc-123"
 
 
-def testBuildRepositoryArchiveAssetDirectory_whenTrailingSlash_returnsLastSegment() -> (
+def testConstructRepositoryArchiveAssetDirectory_whenTrailingSlash_returnsLastSegment() -> (
     None
 ):
     """A trailing slash does not produce an empty segment."""
-    result = utils.build_repository_archive_asset_directory(
+    result = utils.construct_repository_archive_asset_directory(
         "https://storage.googleapis.com/uploads/abc-123/"
+    )
+
+    assert result == "abc-123"
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenNoUploadsSegment_fallsBackToLastSegment() -> (
+    None
+):
+    """Without an `uploads` segment the last path segment is used as a fallback."""
+    result = utils.construct_repository_archive_asset_directory(
+        "https://example.com/archives/abc-123"
     )
 
     assert result == "abc-123"

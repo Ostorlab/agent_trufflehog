@@ -12,15 +12,16 @@ import magic
 logger = logging.getLogger(__name__)
 
 
-def build_repository_asset_directory(repository_url: str, commit_hash: str) -> str:
-    """Build the repository extraction folder name used in multi-asset scans.
+def construct_repository_asset_directory(repository_url: str, commit_hash: str) -> str:
+    """Construct the repository extraction directory name used in multi-asset scans.
 
     Args:
         repository_url: URL of the repository asset.
         commit_hash: Commit hash checked out for the repository asset.
 
     Returns:
-        Folder name composed from the repository name and commit hash.
+        Directory name composed from the repository name and commit hash, or an
+        empty string when no repository name can be derived from the URL.
     """
     parsed_url: parse.ParseResult = parse.urlparse(repository_url)
     repository_path: str = parsed_url.path
@@ -30,19 +31,38 @@ def build_repository_asset_directory(repository_url: str, commit_hash: str) -> s
     repository_name: str = os.path.basename(repository_path.rstrip("/"))
     if repository_name.endswith(".git") is True:
         repository_name = repository_name[: -len(".git")]
+    if len(repository_name) == 0:
+        logger.warning(
+            "Could not derive a repository name from URL %r.", repository_url
+        )
+        return ""
     return f"{repository_name}_{commit_hash}"
 
 
-def build_repository_archive_asset_directory(content_url: str) -> str:
-    """Build the archive extraction folder name from its uploaded content URL.
+def construct_repository_archive_asset_directory(content_url: str) -> str:
+    """Construct the archive extraction directory name from its uploaded content URL.
+
+    The asset UUID is expected immediately after the ``uploads`` path segment, as
+    in ``https://example.com/uploads/<uuid>/archive/main.zip``. When the URL does
+    not contain an ``uploads`` segment, the last path segment is used as a
+    fallback.
 
     Args:
         content_url: URL of the uploaded repository archive.
 
     Returns:
-        Last path segment of the archive content URL.
+        The asset directory name derived from the content URL.
     """
     parsed_url: parse.ParseResult = parse.urlparse(content_url)
+    path_segments: list[str] = [
+        segment for segment in parsed_url.path.split("/") if len(segment) > 0
+    ]
+    try:
+        uploads_index: int = path_segments.index("uploads")
+    except ValueError:
+        return os.path.basename(parsed_url.path.rstrip("/"))
+    if uploads_index + 1 < len(path_segments):
+        return path_segments[uploads_index + 1]
     return os.path.basename(parsed_url.path.rstrip("/"))
 
 
@@ -98,7 +118,7 @@ def load_newline_json(byte_data: bytes) -> list[dict[str, Any]]:
     """
     string = byte_data.decode("utf-8")
     data_list = string.split("\n")
-    return list(json.loads(element) for element in data_list if element != "")
+    return [json.loads(element) for element in data_list if element != ""]
 
 
 def prune_reports(
@@ -151,7 +171,7 @@ def get_file_type(filename: str, file_content: bytes) -> str:
         return "android_manifest"
     if magic_type == "Android binary XML":
         return "android_binary_xml"
-    if filename.endswith(".js") or filename.endswith(".jsbundle"):
+    if filename.endswith((".js", ".jsbundle")):
         return "js"
     if filename.endswith(".html"):
         return "html"
