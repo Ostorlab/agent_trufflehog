@@ -523,7 +523,7 @@ def testSubprocessParameter_whenProcessingRepositoryArchive_beValid(
     )
     shared_code_path = tmp_path / "code"
     shared_code_path.mkdir()
-    asset_directory = "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+    asset_directory = "cc3714"
     asset_path = shared_code_path / asset_directory
     asset_path.mkdir()
     mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
@@ -549,7 +549,7 @@ def testTruffleHog_whenRepositoryArchiveHasFinding_reportVulnerabilitiesWithRepo
     """Ensure repository archive assets emit vulnerabilities with a repository archive location."""
     shared_code_path = tmp_path / "code"
     shared_code_path.mkdir()
-    asset_directory = "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+    asset_directory = "cc3714"
     asset_path = shared_code_path / asset_directory
     secret_file_path = asset_path / "src" / "secrets.env"
     secret_file_path.parent.mkdir(parents=True)
@@ -572,10 +572,7 @@ def testTruffleHog_whenRepositoryArchiveHasFinding_reportVulnerabilitiesWithRepo
     vulnerability = agent_mock[0].data
     assert vulnerability["risk_rating"] == "HIGH"
     assert vulnerability["vulnerability_location"]["repository_archive"] == {
-        "content_url": (
-            "https://storage.googleapis.com/ostorlabapps/uploads/"
-            "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
-        )
+        "content_url": "https://example.com/uploads/cc3714/archive/main.zip"
     }
     assert vulnerability["vulnerability_location"].get("repository") is None
     assert vulnerability["vulnerability_location"]["metadata"] == [
@@ -621,6 +618,143 @@ def testTruffleHog_whenRepositoryAssetMissingCommitHash_skipsScan(
         selector="v3.asset.repository",
         data={
             "repository_url": "https://github.com/org/repo.git",
+            "provider": "GITHUB",
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert subprocess_mock.call_count == 0
+    assert len(agent_mock) == 0
+
+
+def testTruffleHog_whenRepositoryAssetMissingRepositoryUrl_skipsScan(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    """A repository asset missing its repository_url cannot identify the asset
+    directory, so the scan is skipped instead of scanning the shared `/code` root."""
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
+    subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
+    msg = message.Message.from_data(
+        selector="v3.asset.repository",
+        data={
+            "commit_hash": "a1a10cdbc6551ba359169a3033f193b7f8c1b95d",
+            "provider": "GITHUB",
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert subprocess_mock.call_count == 0
+    assert len(agent_mock) == 0
+
+
+def testTruffleHog_whenRepositoryAssetHasEmptyCommitHash_skipsScan(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    """An empty commit_hash is treated like a missing one and the scan is skipped."""
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
+    subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
+    msg = message.Message.from_data(
+        selector="v3.asset.repository",
+        data={
+            "repository_url": "https://github.com/org/repo.git",
+            "commit_hash": "",
+            "provider": "GITHUB",
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert subprocess_mock.call_count == 0
+    assert len(agent_mock) == 0
+
+
+def testTruffleHog_whenRepositoryArchiveHasEmptyContentUrl_skipsScan(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    """An empty content_url is treated like a missing one and the scan is skipped."""
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
+    subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
+    msg = message.Message.from_data(
+        selector="v3.asset.file.repository_archive",
+        data={"content_url": ""},
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert subprocess_mock.call_count == 0
+    assert len(agent_mock) == 0
+
+
+def testTruffleHog_whenAssetDirectorySymlinkEscapesCode_skipsScan(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    """An asset directory that is a symlink escaping the shared code path is refused."""
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    outside_path = tmp_path / "outside"
+    outside_path.mkdir()
+    # `repo_abc` looks like a valid asset directory but points outside `/code`.
+    (shared_code_path / "repo_abc").symlink_to(outside_path)
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
+    subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
+    msg = message.Message.from_data(
+        selector="v3.asset.repository",
+        data={
+            "repository_url": "https://github.com/org/repo.git",
+            "commit_hash": "abc",
+            "provider": "GITHUB",
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert subprocess_mock.call_count == 0
+    assert len(agent_mock) == 0
+
+
+def testTruffleHog_whenAssetDirectorySymlinkToCodeRoot_skipsScan(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    """An asset directory symlinked to the shared code root would scan every asset
+    and is refused: the resolved path must be a strict descendant of `/code`."""
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    (shared_code_path / "repo_abc").symlink_to(shared_code_path)
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
+    subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
+    msg = message.Message.from_data(
+        selector="v3.asset.repository",
+        data={
+            "repository_url": "https://github.com/org/repo.git",
+            "commit_hash": "abc",
             "provider": "GITHUB",
         },
     )

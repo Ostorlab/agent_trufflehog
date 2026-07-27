@@ -191,26 +191,29 @@ def _get_asset_directory(message: m.Message) -> str | None:
         message does not carry enough information to identify the asset.
     """
     if message.selector == REPOSITORY_SELECTOR:
-        repository_url: str | None = message.data.get("repository_url") or None
-        commit_hash: str | None = message.data.get("commit_hash") or None
-        if repository_url is None or commit_hash is None:
+        repository_url: str | None = message.data.get("repository_url")
+        commit_hash: str | None = message.data.get("commit_hash")
+        if (
+            repository_url is None
+            or repository_url == ""
+            or commit_hash is None
+            or commit_hash == ""
+        ):
             logger.warning(
                 "Repository asset message is missing repository_url or "
                 "commit_hash; cannot resolve asset directory.",
             )
             return None
-        return utils.construct_repository_asset_directory(
-            str(repository_url), str(commit_hash)
-        )
+        return utils.construct_repository_asset_directory(repository_url, commit_hash)
     if message.selector == REPOSITORY_ARCHIVE_SELECTOR:
-        content_url: str | None = message.data.get("content_url") or None
-        if content_url is None:
+        content_url: str | None = message.data.get("content_url")
+        if content_url is None or content_url == "":
             logger.warning(
                 "Repository archive asset message is missing content_url; "
                 "cannot resolve asset directory.",
             )
             return None
-        return utils.construct_repository_archive_asset_directory(str(content_url))
+        return utils.construct_repository_archive_asset_directory(content_url)
     return None
 
 
@@ -378,12 +381,33 @@ class TruffleHogAgent(
                     "Refusing to scan invalid asset directory %r.", asset_directory
                 )
                 return
-            repository_code_path = os.path.realpath(
+            assets_code_path = os.path.normpath(ASSETS_CODE_PATH)
+            unresolved_repository_code_path = os.path.normpath(
                 os.path.join(ASSETS_CODE_PATH, asset_directory)
             )
-            assets_code_path = os.path.realpath(ASSETS_CODE_PATH)
-            if os.path.commonpath([assets_code_path, repository_code_path]) != (
-                assets_code_path
+            # Validate the unresolved path before resolving symlinks: a symlinked
+            # asset directory such as `/code/repo_x -> /code` would otherwise pass
+            # the post-realpath check and cause a broad `/code` scan.
+            if (
+                os.path.commonpath([assets_code_path, unresolved_repository_code_path])
+                != assets_code_path
+            ):
+                logger.error(
+                    "Refusing to scan asset directory outside %s: %r.",
+                    ASSETS_CODE_PATH,
+                    asset_directory,
+                )
+                return
+            repository_code_path = os.path.realpath(unresolved_repository_code_path)
+            real_assets_code_path = os.path.realpath(assets_code_path)
+            # Require the resolved path to be a strict descendant of the shared
+            # code path: a symlinked asset directory such as
+            # `/code/repo_x -> /code` would resolve to `/code` itself and cause a
+            # broad scan of every asset.
+            if (
+                repository_code_path == real_assets_code_path
+                or os.path.commonpath([real_assets_code_path, repository_code_path])
+                != real_assets_code_path
             ):
                 logger.error(
                     "Refusing to scan asset directory outside %s: %r.",
