@@ -2,12 +2,79 @@
 
 import json
 import logging
+import os
 import re
 from typing import Any
+from urllib import parse
 
 import magic
 
 logger = logging.getLogger(__name__)
+
+
+def construct_repository_asset_directory(repository_url: str, commit_hash: str) -> str:
+    """Construct the repository extraction directory name used in multi-asset scans.
+
+    Args:
+        repository_url: URL of the repository asset.
+        commit_hash: Commit hash checked out for the repository asset.
+
+    Returns:
+        Directory name composed from the repository name and commit hash.
+
+    Raises:
+        ValueError: If the URL does not include a usable repository name.
+    """
+    parsed_url: parse.ParseResult = parse.urlparse(repository_url)
+    repository_path: str = parsed_url.path
+    if len(repository_path) == 0:
+        repository_path = repository_url
+
+    repository_name: str = os.path.basename(repository_path.rstrip("/"))
+    if repository_name.endswith(".git") is True:
+        repository_name = repository_name[: -len(".git")]
+    if len(repository_name) == 0:
+        raise ValueError(
+            f"Repository URL has no repository name segment: {repository_url!r}"
+        )
+    return f"{repository_name}_{commit_hash}"
+
+
+def construct_repository_archive_asset_directory(content_url: str) -> str:
+    """Construct the archive extraction directory name from its uploaded content URL.
+
+    The asset identifier is expected immediately after the ``uploads`` path
+    segment, as in ``https://example.com/uploads/<uuid>/archive/main.zip``.
+    Malformed archive URLs that carry no ``uploads`` segment, or no asset
+    identifier after it, are rejected rather than falling back to an unrelated
+    path segment.
+
+    Args:
+        content_url: URL of the uploaded repository archive.
+
+    Returns:
+        The asset directory name derived from the content URL.
+
+    Raises:
+        ValueError: If the content URL has no ``uploads`` segment or no asset
+            identifier immediately after it.
+    """
+    parsed_url: parse.ParseResult = parse.urlparse(content_url)
+    path_segments: list[str] = [
+        segment for segment in parsed_url.path.split("/") if len(segment) > 0
+    ]
+    try:
+        uploads_index: int = path_segments.index("uploads")
+    except ValueError as e:
+        raise ValueError(
+            f"Repository archive content_url has no `uploads` segment: {content_url!r}"
+        ) from e
+    if uploads_index + 1 >= len(path_segments):
+        raise ValueError(
+            f"Repository archive content_url has no asset identifier after "
+            f"`uploads`: {content_url!r}"
+        )
+    return path_segments[uploads_index + 1]
 
 
 def should_exclude_path(
@@ -62,7 +129,7 @@ def load_newline_json(byte_data: bytes) -> list[dict[str, Any]]:
     """
     string = byte_data.decode("utf-8")
     data_list = string.split("\n")
-    return list(json.loads(element) for element in data_list if element != "")
+    return [json.loads(element) for element in data_list if element != ""]
 
 
 def prune_reports(
@@ -115,7 +182,7 @@ def get_file_type(filename: str, file_content: bytes) -> str:
         return "android_manifest"
     if magic_type == "Android binary XML":
         return "android_binary_xml"
-    if filename.endswith(".js") or filename.endswith(".jsbundle"):
+    if filename.endswith((".js", ".jsbundle")):
         return "js"
     if filename.endswith(".html"):
         return "html"

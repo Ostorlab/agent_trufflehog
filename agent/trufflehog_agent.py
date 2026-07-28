@@ -2,31 +2,28 @@
 
 import json
 import logging
+import os
 import pathlib
+import re
 import subprocess
 import tempfile
-
 from typing import Any
 from urllib import parse
-import tenacity
 
+import tenacity
 from ostorlab.agent import agent
+from ostorlab.agent import definitions as agent_definitions
 from ostorlab.agent.kb import kb
 from ostorlab.agent.message import message as m
 from ostorlab.agent.mixins import agent_persist_mixin
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin as vuln_mixin
-from rich import logging as rich_logging
-from ostorlab.assets import ios_store
-from ostorlab.assets import android_store
-from ostorlab.assets import harmonyos_store
-from ostorlab.assets import domain_name
+from ostorlab.assets import android_store, domain_name, harmonyos_store, ios_store
 from ostorlab.assets import repository as repository_asset
 from ostorlab.assets import repository_archive as repository_archive_asset
-from ostorlab.agent import definitions as agent_definitions
 from ostorlab.runtimes import definitions as runtime_definitions
+from rich import logging as rich_logging
 
-from agent import input_type_handler
-from agent import utils
+from agent import input_type_handler, utils
 
 BLACKLISTED_FILE_TYPES = [
     "image",
@@ -43,7 +40,8 @@ LOGS_SET_KEY = "trufflehog_logs"
 MAX_LOGS_BATCH_SIZE = 1000
 LOCK_RETRIES = 3
 LOCK_RETRY_DELAY = 2
-REPOSITORY_CODE_PATH = "/code"
+ASSETS_CODE_PATH = "/code"
+ASSET_DIRECTORY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 REPOSITORY_SELECTOR = "v3.asset.repository"
 REPOSITORY_ARCHIVE_SELECTOR = "v3.asset.file.repository_archive"
 
@@ -164,7 +162,7 @@ def _prepare_vulnerability_location(
     )
 
 
-def _get_repository_file_path(vuln: dict[str, Any]) -> str | None:
+def _get_repository_file_path(vuln: dict[str, Any], scan_root: str) -> str | None:
     """Extract the file path TruffleHog reports for a repository finding."""
     source_data = vuln.get("SourceMetadata", {}).get("Data", {})
     source_details = source_data.get("Filesystem")
@@ -175,10 +173,66 @@ def _get_repository_file_path(vuln: dict[str, Any]) -> str | None:
         path = pathlib.Path(file_path)
         if path.is_absolute() is True:
             try:
-                return str(path.relative_to(REPOSITORY_CODE_PATH))
+                return str(path.relative_to(scan_root))
             except ValueError:
                 return str(file_path)
         return str(file_path)
+    return None
+
+
+def _get_asset_directory(message: m.Message) -> str | None:
+    """Resolve the extraction directory name for a repository-like asset message.
+
+    Args:
+        message: The message describing the asset being scanned.
+
+    Returns:
+        The asset directory name under the shared code path, ``None`` when the
+        message does not describe a repository-like asset, is missing required
+        fields, or when the directory name cannot be derived from a malformed
+        asset URL (an empty string when the repository name cannot be derived).
+    """
+    if message.selector == REPOSITORY_SELECTOR:
+        repository_url: str | None = message.data.get("repository_url")
+        commit_hash: str | None = message.data.get("commit_hash")
+        if (
+            repository_url is None
+            or repository_url == ""
+            or commit_hash is None
+            or commit_hash == ""
+        ):
+            logger.error(
+                "Repository asset message is missing repository_url or "
+                "commit_hash; cannot resolve asset directory.",
+            )
+            return None
+        try:
+            return utils.construct_repository_asset_directory(
+                repository_url, commit_hash
+            )
+        except ValueError as e:
+            logger.error(
+                "Could not derive repository asset directory from metadata: %s",
+                e,
+            )
+            return None
+    if message.selector == REPOSITORY_ARCHIVE_SELECTOR:
+        content_url: str | None = message.data.get("content_url")
+        if content_url is None or content_url == "":
+            logger.error(
+                "Repository archive asset message is missing content_url; "
+                "cannot resolve asset directory.",
+            )
+            return None
+        try:
+            return utils.construct_repository_archive_asset_directory(content_url)
+        except ValueError as e:
+            logger.error(
+                "Could not derive repository archive asset directory from "
+                "content_url: %s",
+                e,
+            )
+            return None
     return None
 
 
@@ -246,7 +300,11 @@ class TruffleHogAgent(
         return None, None
 
     def _report_vulnz(
-        self, vulnz: list[dict[str, Any]], message: m.Message, content: bytes | None
+        self,
+        vulnz: list[dict[str, Any]],
+        message: m.Message,
+        content: bytes | None,
+        scan_root: str | None,
     ) -> None:
         for vuln in vulnz:
             secret_token = vuln.get("Raw") or vuln.get("Redacted")
@@ -263,8 +321,8 @@ class TruffleHogAgent(
             if (
                 message.selector == REPOSITORY_SELECTOR
                 or message.selector == REPOSITORY_ARCHIVE_SELECTOR
-            ):
-                path = _get_repository_file_path(vuln)
+            ) and scan_root is not None:
+                path = _get_repository_file_path(vuln, scan_root)
 
             if path is not None:
                 technical_detail += f"""found in file `{path}`."""
@@ -317,6 +375,7 @@ class TruffleHogAgent(
 
         cmd_output: bytes | None = None
         combined_content: bytes | None = b""
+        scan_root: str | None = None
         if message.selector.startswith("v3.asset.link"):
             link = message.data.get("url", "")
             link_type = input_type_handler.get_link_type(link)
@@ -328,19 +387,67 @@ class TruffleHogAgent(
             message.selector == REPOSITORY_SELECTOR
             or message.selector == REPOSITORY_ARCHIVE_SELECTOR
         ):
-            repository_path = pathlib.Path(REPOSITORY_CODE_PATH)
+            asset_directory = _get_asset_directory(message)
+            if asset_directory is None or len(asset_directory) == 0:
+                logger.error(
+                    "Unable to determine asset directory for message %s. "
+                    "Skipping scan.",
+                    message.selector,
+                )
+                return
+            if ASSET_DIRECTORY_PATTERN.fullmatch(asset_directory) is None:
+                logger.error(
+                    "Refusing to scan invalid asset directory %r.", asset_directory
+                )
+                return
+            assets_code_path = os.path.normpath(ASSETS_CODE_PATH)
+            unresolved_repository_code_path = os.path.normpath(
+                os.path.join(ASSETS_CODE_PATH, asset_directory)
+            )
+            # Validate the unresolved path before resolving symlinks: a symlinked
+            # asset directory such as `/code/repo_x -> /code` would otherwise pass
+            # the post-realpath check and cause a broad `/code` scan.
+            if (
+                os.path.commonpath([assets_code_path, unresolved_repository_code_path])
+                != assets_code_path
+            ):
+                logger.error(
+                    "Refusing to scan asset directory outside %s: %r.",
+                    ASSETS_CODE_PATH,
+                    asset_directory,
+                )
+                return
+            repository_code_path = os.path.realpath(unresolved_repository_code_path)
+            real_assets_code_path = os.path.realpath(assets_code_path)
+            # Require the resolved path to be a strict descendant of the shared
+            # code path: a symlinked asset directory such as
+            # `/code/repo_x -> /code` would resolve to `/code` itself and cause a
+            # broad scan of every asset.
+            if (
+                repository_code_path == real_assets_code_path
+                or os.path.commonpath([real_assets_code_path, repository_code_path])
+                != real_assets_code_path
+            ):
+                logger.error(
+                    "Refusing to scan asset directory outside %s: %r.",
+                    ASSETS_CODE_PATH,
+                    asset_directory,
+                )
+                return
+            repository_path = pathlib.Path(repository_code_path)
             if repository_path.is_dir() is False:
                 logger.error(
                     "Repository path %s is not available. Ensure shared volume is mounted.",
-                    REPOSITORY_CODE_PATH,
+                    repository_code_path,
                 )
                 return
+            scan_root = repository_code_path
             logger.info(
                 "Processing %s asset from %s",
                 message.selector,
-                REPOSITORY_CODE_PATH,
+                repository_code_path,
             )
-            cmd_output = self.run_scanner("filesystem", REPOSITORY_CODE_PATH)
+            cmd_output = self.run_scanner("filesystem", repository_code_path)
         elif message.selector.startswith("v3.asset.file"):
             path = message.data.get("path", "")
             if (
@@ -384,7 +491,7 @@ class TruffleHogAgent(
 
         secrets = self._process_scanner_output(cmd_output)
 
-        self._report_vulnz(secrets, message, combined_content)
+        self._report_vulnz(secrets, message, combined_content, scan_root)
 
 
 def _compute_dna(

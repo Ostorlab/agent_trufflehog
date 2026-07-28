@@ -201,3 +201,143 @@ def testShouldExcludePath_whenRegexIsInvalid_shouldSkipPatternAndReturnFalse() -
     result = utils.should_exclude_path("/workspace/a.py", ["[invalid("])
 
     assert result is False
+
+
+def testConstructRepositoryAssetDirectory_whenGitUrl_returnsNameAndCommitHash() -> None:
+    """A `.git` repository URL yields `<repository_name>_<commit_hash>`."""
+    result = utils.construct_repository_asset_directory(
+        "https://github.com/Ostorlab/agent_trufflehog.git",
+        "a1a10cdbc6551ba359169a3033f193b7f8c1b95d",
+    )
+
+    assert result == "agent_trufflehog_a1a10cdbc6551ba359169a3033f193b7f8c1b95d"
+
+
+def testConstructRepositoryAssetDirectory_whenUrlWithoutGitSuffix_returnsNameAndCommitHash() -> (
+    None
+):
+    """A repository URL without a `.git` suffix still yields the bare repository name."""
+    result = utils.construct_repository_asset_directory(
+        "https://github.com/Ostorlab/agent_trufflehog",
+        "abc123",
+    )
+
+    assert result == "agent_trufflehog_abc123"
+
+
+def testConstructRepositoryAssetDirectory_whenTrailingSlash_returnsNameAndCommitHash() -> (
+    None
+):
+    """A trailing slash on the repository URL does not leak into the folder name."""
+    result = utils.construct_repository_asset_directory(
+        "https://github.com/Ostorlab/agent_trufflehog.git/",
+        "abc123",
+    )
+
+    assert result == "agent_trufflehog_abc123"
+
+
+@pytest.mark.parametrize(
+    ("repository_url", "expected_repository_name"),
+    [
+        ("https://github.com/example-org/juice-shop-private", "juice-shop-private"),
+        ("https://gitlab.com/example-user/juice-shop-private", "juice-shop-private"),
+        ("https://bitbucket.org/example-user/juice-shop", "juice-shop"),
+        (
+            "https://example-org@dev.azure.com/example-org/test-project/_git/juice-shop",
+            "juice-shop",
+        ),
+        ("git://git.example.com/example-org/juice-shop.git", "juice-shop"),
+    ],
+)
+def testConstructRepositoryAssetDirectory_whenProviderUrlShapes_returnsNameAndCommitHash(
+    repository_url: str, expected_repository_name: str
+) -> None:
+    """Supported repository provider URL shapes yield `<repository_name>_<commit_hash>`."""
+    result = utils.construct_repository_asset_directory(repository_url, "abc123")
+
+    assert result == f"{expected_repository_name}_abc123"
+
+
+@pytest.mark.parametrize(
+    "repository_url",
+    ["", "/", "https://github.com/", "https://github.com/user/.git"],
+)
+def testConstructRepositoryAssetDirectory_whenUrlHasNoRepositoryName_raisesValueError(
+    repository_url: str,
+) -> None:
+    """A URL with no derivable repository name is rejected by the helper."""
+    with pytest.raises(ValueError):
+        utils.construct_repository_asset_directory(repository_url, "abc123")
+
+
+def testConstructRepositoryArchiveAssetDirectory_returnsSegmentAfterUploads() -> None:
+    """The archive directory is the path segment immediately after `uploads`."""
+    result = utils.construct_repository_archive_asset_directory(
+        "https://example.com/uploads/62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+    )
+
+    assert result == "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenUploadsFollowedByPath_returnsUuid() -> (
+    None
+):
+    """Only the segment after `uploads` is kept, later path segments are ignored."""
+    result = utils.construct_repository_archive_asset_directory(
+        "https://example.com/uploads/cc3714/archive/main.zip"
+    )
+
+    assert result == "cc3714"
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenQueryParams_ignoresQuery() -> None:
+    """Query parameters on the content URL are ignored when deriving the directory."""
+    result = utils.construct_repository_archive_asset_directory(
+        "https://example.com/uploads/abc-123?token=secret&expiry=1"
+    )
+
+    assert result == "abc-123"
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenTrailingSlash_returnsLastSegment() -> (
+    None
+):
+    """A trailing slash does not produce an empty segment."""
+    result = utils.construct_repository_archive_asset_directory(
+        "https://example.com/uploads/abc-123/"
+    )
+
+    assert result == "abc-123"
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenNoUploadsSegment_raisesValueError() -> (
+    None
+):
+    """An archive URL without an `uploads` segment is rejected instead of
+    falling back to an unrelated path segment."""
+    with pytest.raises(ValueError):
+        utils.construct_repository_archive_asset_directory(
+            "https://example.com/archives/abc-123"
+        )
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenUploadsIsLastSegment_raisesValueError() -> (
+    None
+):
+    """An archive URL whose `uploads` segment has no asset identifier after it
+    is rejected instead of returning `uploads` as the directory name."""
+    with pytest.raises(ValueError):
+        utils.construct_repository_archive_asset_directory(
+            "https://example.com/uploads"
+        )
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenUploadsTrailingSlash_raisesValueError() -> (
+    None
+):
+    """A trailing slash after `uploads` does not produce an asset identifier."""
+    with pytest.raises(ValueError):
+        utils.construct_repository_archive_asset_directory(
+            "https://example.com/uploads/"
+        )

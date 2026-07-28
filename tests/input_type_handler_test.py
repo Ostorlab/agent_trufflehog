@@ -12,7 +12,6 @@ from agent import input_type_handler
         ("https://gitlab.com/kalilinux/packages/trufflehog.git", "gitlab"),
         ("https://github.com/user/repo.git", "git"),
         ("https://www.example.com/", None),
-        ("https://github.com/Ostorlab/agent_trufflehog.git", "git"),
         ("https://gitlab.com/open-source-projects-lambda/cpython_mirror.git", "gitlab"),
         ("https://www.example.edu/ball/box.html", None),
     ],
