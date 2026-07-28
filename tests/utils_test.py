@@ -289,12 +289,33 @@ def testConstructRepositoryArchiveAssetDirectory_whenTrailingSlash_returnsLastSe
     assert result == "abc-123"
 
 
-def testConstructRepositoryArchiveAssetDirectory_whenNoUploadsSegment_fallsBackToLastSegment() -> (
+def testConstructRepositoryArchiveAssetDirectory_whenNoUploadsSegment_raisesValueError() -> (
     None
 ):
-    """Without an `uploads` segment the last path segment is used as a fallback."""
-    result = utils.construct_repository_archive_asset_directory(
-        "https://example.com/archives/abc-123"
-    )
+    """An archive URL without an `uploads` segment is rejected instead of
+    falling back to an unrelated path segment."""
+    with pytest.raises(ValueError):
+        utils.construct_repository_archive_asset_directory(
+            "https://example.com/archives/abc-123"
+        )
 
-    assert result == "abc-123"
+
+def testConstructRepositoryArchiveAssetDirectory_whenUploadsIsLastSegment_raisesValueError() -> (
+    None
+):
+    """An archive URL whose `uploads` segment has no asset identifier after it
+    is rejected instead of returning `uploads` as the directory name."""
+    with pytest.raises(ValueError):
+        utils.construct_repository_archive_asset_directory(
+            "https://example.com/uploads"
+        )
+
+
+def testConstructRepositoryArchiveAssetDirectory_whenUploadsTrailingSlash_raisesValueError() -> (
+    None
+):
+    """A trailing slash after `uploads` does not produce an asset identifier."""
+    with pytest.raises(ValueError):
+        utils.construct_repository_archive_asset_directory(
+            "https://example.com/uploads/"
+        )

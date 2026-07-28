@@ -765,6 +765,31 @@ def testTruffleHog_whenAssetDirectorySymlinkToCodeRoot_skipsScan(
     assert len(agent_mock) == 0
 
 
+def testTruffleHog_whenRepositoryArchiveHasMalformedContentUrl_skipsScan(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    """A repository archive whose `content_url` has no `uploads` segment cannot
+    identify the asset directory, so the scan is skipped instead of scanning the
+    shared `/code` root or an unrelated directory."""
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
+    subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
+    msg = message.Message.from_data(
+        selector="v3.asset.file.repository_archive",
+        data={"content_url": "https://example.com/archives/abc-123"},
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert subprocess_mock.call_count == 0
+    assert len(agent_mock) == 0
+
+
 def testTruffleHog_whenFilePathIsExcluded_notProcessMessage(
     trufflehog_agent_file_with_exclude_path_regexes: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: dict[str | bytes, str | bytes],

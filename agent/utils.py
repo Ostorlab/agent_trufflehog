@@ -42,16 +42,21 @@ def construct_repository_asset_directory(repository_url: str, commit_hash: str) 
 def construct_repository_archive_asset_directory(content_url: str) -> str:
     """Construct the archive extraction directory name from its uploaded content URL.
 
-    The asset UUID is expected immediately after the ``uploads`` path segment, as
-    in ``https://example.com/uploads/<uuid>/archive/main.zip``. When the URL does
-    not contain an ``uploads`` segment, the last path segment is used as a
-    fallback.
+    The asset identifier is expected immediately after the ``uploads`` path
+    segment, as in ``https://example.com/uploads/<uuid>/archive/main.zip``.
+    Malformed archive URLs that carry no ``uploads`` segment, or no asset
+    identifier after it, are rejected rather than falling back to an unrelated
+    path segment.
 
     Args:
         content_url: URL of the uploaded repository archive.
 
     Returns:
         The asset directory name derived from the content URL.
+
+    Raises:
+        ValueError: If the content URL has no ``uploads`` segment or no asset
+            identifier immediately after it.
     """
     parsed_url: parse.ParseResult = parse.urlparse(content_url)
     path_segments: list[str] = [
@@ -59,11 +64,16 @@ def construct_repository_archive_asset_directory(content_url: str) -> str:
     ]
     try:
         uploads_index: int = path_segments.index("uploads")
-    except ValueError:
-        return os.path.basename(parsed_url.path.rstrip("/"))
-    if uploads_index + 1 < len(path_segments):
-        return path_segments[uploads_index + 1]
-    return os.path.basename(parsed_url.path.rstrip("/"))
+    except ValueError as e:
+        raise ValueError(
+            f"Repository archive content_url has no `uploads` segment: {content_url!r}"
+        ) from e
+    if uploads_index + 1 >= len(path_segments):
+        raise ValueError(
+            f"Repository archive content_url has no asset identifier after "
+            f"`uploads`: {content_url!r}"
+        )
+    return path_segments[uploads_index + 1]
 
 
 def should_exclude_path(

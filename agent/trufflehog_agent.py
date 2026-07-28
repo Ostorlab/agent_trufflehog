@@ -187,8 +187,10 @@ def _get_asset_directory(message: m.Message) -> str | None:
         message: The message describing the asset being scanned.
 
     Returns:
-        The asset directory name under the shared code path, or None when the
-        message does not carry enough information to identify the asset.
+        The asset directory name under the shared code path, ``None`` when the
+        message does not describe a repository-like asset, is missing required
+        fields, or when the directory name cannot be derived from a malformed
+        asset URL (an empty string when the repository name cannot be derived).
     """
     if message.selector == REPOSITORY_SELECTOR:
         repository_url: str | None = message.data.get("repository_url")
@@ -213,7 +215,15 @@ def _get_asset_directory(message: m.Message) -> str | None:
                 "cannot resolve asset directory.",
             )
             return None
-        return utils.construct_repository_archive_asset_directory(content_url)
+        try:
+            return utils.construct_repository_archive_asset_directory(content_url)
+        except ValueError as e:
+            logger.warning(
+                "Could not derive repository archive asset directory from "
+                "content_url: %s",
+                e,
+            )
+            return None
     return None
 
 
