@@ -210,7 +210,7 @@ def _get_asset_directory(message: m.Message) -> str | None:
     if message.selector == REPOSITORY_ARCHIVE_SELECTOR:
         content_url: str | None = message.data.get("content_url")
         if content_url is None or content_url == "":
-            logger.warning(
+            logger.error(
                 "Repository archive asset message is missing content_url; "
                 "cannot resolve asset directory.",
             )
