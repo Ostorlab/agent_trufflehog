@@ -32,9 +32,7 @@ def construct_repository_asset_directory(repository_url: str, commit_hash: str) 
     if repository_name.endswith(".git") is True:
         repository_name = repository_name[: -len(".git")]
     if len(repository_name) == 0:
-        logger.error(
-            "Could not derive a repository name from URL %r.", repository_url
-        )
+        logger.error("Could not derive a repository name from URL %r.", repository_url)
         return ""
     return f"{repository_name}_{commit_hash}"
 

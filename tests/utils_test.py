@@ -237,6 +237,28 @@ def testConstructRepositoryAssetDirectory_whenTrailingSlash_returnsNameAndCommit
     assert result == "agent_trufflehog_abc123"
 
 
+@pytest.mark.parametrize(
+    ("repository_url", "expected_repository_name"),
+    [
+        ("https://github.com/example-org/juice-shop-private", "juice-shop-private"),
+        ("https://gitlab.com/example-user/juice-shop-private", "juice-shop-private"),
+        ("https://bitbucket.org/example-user/juice-shop", "juice-shop"),
+        (
+            "https://example-org@dev.azure.com/example-org/test-project/_git/juice-shop",
+            "juice-shop",
+        ),
+        ("git://git.example.com/example-org/juice-shop.git", "juice-shop"),
+    ],
+)
+def testConstructRepositoryAssetDirectory_whenProviderUrlShapes_returnsNameAndCommitHash(
+    repository_url: str, expected_repository_name: str
+) -> None:
+    """Supported repository provider URL shapes yield `<repository_name>_<commit_hash>`."""
+    result = utils.construct_repository_asset_directory(repository_url, "abc123")
+
+    assert result == f"{expected_repository_name}_abc123"
+
+
 def testConstructRepositoryAssetDirectory_whenRepositoryNameCannotBeDerived_returnsEmptyString() -> (
     None
 ):
@@ -251,8 +273,7 @@ def testConstructRepositoryAssetDirectory_whenRepositoryNameCannotBeDerived_retu
 def testConstructRepositoryArchiveAssetDirectory_returnsSegmentAfterUploads() -> None:
     """The archive directory is the path segment immediately after `uploads`."""
     result = utils.construct_repository_archive_asset_directory(
-        "https://storage.googleapis.com/ostorlabapps/uploads/"
-        "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
+        "https://example.com/uploads/62f54a92-6d5f-4ce8-848e-adf13ff79fee"
     )
 
     assert result == "62f54a92-6d5f-4ce8-848e-adf13ff79fee"
@@ -272,7 +293,7 @@ def testConstructRepositoryArchiveAssetDirectory_whenUploadsFollowedByPath_retur
 def testConstructRepositoryArchiveAssetDirectory_whenQueryParams_ignoresQuery() -> None:
     """Query parameters on the content URL are ignored when deriving the directory."""
     result = utils.construct_repository_archive_asset_directory(
-        "https://storage.googleapis.com/uploads/abc-123?token=secret&expiry=1"
+        "https://example.com/uploads/abc-123?token=secret&expiry=1"
     )
 
     assert result == "abc-123"
@@ -283,7 +304,7 @@ def testConstructRepositoryArchiveAssetDirectory_whenTrailingSlash_returnsLastSe
 ):
     """A trailing slash does not produce an empty segment."""
     result = utils.construct_repository_archive_asset_directory(
-        "https://storage.googleapis.com/uploads/abc-123/"
+        "https://example.com/uploads/abc-123/"
     )
 
     assert result == "abc-123"
