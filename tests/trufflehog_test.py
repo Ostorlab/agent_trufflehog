@@ -682,6 +682,37 @@ def testTruffleHog_whenRepositoryAssetHasEmptyCommitHash_skipsScan(
     assert len(agent_mock) == 0
 
 
+@pytest.mark.parametrize(
+    "repository_url", ["", "/", "https://github.com/", "https://github.com/user/.git"]
+)
+def testTruffleHog_whenRepositoryUrlYieldsNoRepositoryName_skipsScan(
+    repository_url: str,
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    tmp_path: pathlib.Path,
+) -> None:
+    """Repository URLs with no usable repository name are refused before scanning."""
+    shared_code_path = tmp_path / "code"
+    shared_code_path.mkdir()
+    mocker.patch("agent.trufflehog_agent.ASSETS_CODE_PATH", str(shared_code_path))
+    subprocess_mock = mocker.patch("subprocess.check_output", return_value=b"")
+    msg = message.Message.from_data(
+        selector="v3.asset.repository",
+        data={
+            "repository_url": repository_url,
+            "commit_hash": "abc123",
+            "provider": "GITHUB",
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert subprocess_mock.call_count == 0
+    assert len(agent_mock) == 0
+
+
 def testTruffleHog_whenRepositoryArchiveHasEmptyContentUrl_skipsScan(
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: dict[str | bytes, str | bytes],

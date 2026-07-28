@@ -20,8 +20,10 @@ def construct_repository_asset_directory(repository_url: str, commit_hash: str) 
         commit_hash: Commit hash checked out for the repository asset.
 
     Returns:
-        Directory name composed from the repository name and commit hash, or an
-        empty string when no repository name can be derived from the URL.
+        Directory name composed from the repository name and commit hash.
+
+    Raises:
+        ValueError: If the URL does not include a usable repository name.
     """
     parsed_url: parse.ParseResult = parse.urlparse(repository_url)
     repository_path: str = parsed_url.path
@@ -32,8 +34,9 @@ def construct_repository_asset_directory(repository_url: str, commit_hash: str) 
     if repository_name.endswith(".git") is True:
         repository_name = repository_name[: -len(".git")]
     if len(repository_name) == 0:
-        logger.error("Could not derive a repository name from URL %r.", repository_url)
-        return ""
+        raise ValueError(
+            f"Repository URL has no repository name segment: {repository_url!r}"
+        )
     return f"{repository_name}_{commit_hash}"
 
 

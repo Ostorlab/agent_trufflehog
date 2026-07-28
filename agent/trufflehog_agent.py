@@ -206,7 +206,16 @@ def _get_asset_directory(message: m.Message) -> str | None:
                 "commit_hash; cannot resolve asset directory.",
             )
             return None
-        return utils.construct_repository_asset_directory(repository_url, commit_hash)
+        try:
+            return utils.construct_repository_asset_directory(
+                repository_url, commit_hash
+            )
+        except ValueError as e:
+            logger.error(
+                "Could not derive repository asset directory from metadata: %s",
+                e,
+            )
+            return None
     if message.selector == REPOSITORY_ARCHIVE_SELECTOR:
         content_url: str | None = message.data.get("content_url")
         if content_url is None or content_url == "":

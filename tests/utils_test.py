@@ -259,15 +259,16 @@ def testConstructRepositoryAssetDirectory_whenProviderUrlShapes_returnsNameAndCo
     assert result == f"{expected_repository_name}_abc123"
 
 
-def testConstructRepositoryAssetDirectory_whenRepositoryNameCannotBeDerived_returnsEmptyString() -> (
-    None
-):
-    """A URL with no derivable repository name yields an empty string."""
-    result = utils.construct_repository_asset_directory(
-        "https://example.com/", "abc123"
-    )
-
-    assert result == ""
+@pytest.mark.parametrize(
+    "repository_url",
+    ["", "/", "https://github.com/", "https://github.com/user/.git"],
+)
+def testConstructRepositoryAssetDirectory_whenUrlHasNoRepositoryName_raisesValueError(
+    repository_url: str,
+) -> None:
+    """A URL with no derivable repository name is rejected by the helper."""
+    with pytest.raises(ValueError):
+        utils.construct_repository_asset_directory(repository_url, "abc123")
 
 
 def testConstructRepositoryArchiveAssetDirectory_returnsSegmentAfterUploads() -> None:
