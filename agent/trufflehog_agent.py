@@ -201,7 +201,7 @@ def _get_asset_directory(message: m.Message) -> str | None:
             or commit_hash is None
             or commit_hash == ""
         ):
-            logger.warning(
+            logger.error(
                 "Repository asset message is missing repository_url or "
                 "commit_hash; cannot resolve asset directory.",
             )
