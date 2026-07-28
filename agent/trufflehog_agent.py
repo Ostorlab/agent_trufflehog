@@ -218,7 +218,7 @@ def _get_asset_directory(message: m.Message) -> str | None:
         try:
             return utils.construct_repository_archive_asset_directory(content_url)
         except ValueError as e:
-            logger.warning(
+            logger.error(
                 "Could not derive repository archive asset directory from "
                 "content_url: %s",
                 e,
