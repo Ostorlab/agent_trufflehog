@@ -17,13 +17,21 @@ from ostorlab.agent.kb import kb
 from ostorlab.agent.message import message as m
 from ostorlab.agent.mixins import agent_persist_mixin
 from ostorlab.agent.mixins import agent_report_vulnerability_mixin as vuln_mixin
-from ostorlab.assets import android_store, domain_name, harmonyos_store, ios_store
+from ostorlab.assets import (
+    android_store,
+    domain_name,
+    harmonyos_store,
+    ios_store,
+)
 from ostorlab.assets import repository as repository_asset
 from ostorlab.assets import repository_archive as repository_archive_asset
 from ostorlab.runtimes import definitions as runtime_definitions
 from rich import logging as rich_logging
 
-from agent import input_type_handler, utils
+from agent import (
+    input_type_handler,
+    utils,
+)
 
 BLACKLISTED_FILE_TYPES = [
     "image",
