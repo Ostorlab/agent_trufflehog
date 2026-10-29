@@ -232,6 +232,67 @@ def testTrufflehog_whenProcessingVerifiedAndUnverifiedSecrets_shouldReportOnlyVe
     )
 
 
+def testTrufflehog_whenLobDetectorMatchesUiStringKey_notReportVulnerability(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """A Lob-detector match on a UI/localization string key is a false positive.
+
+    The Lob detector's `live_`/`test_` prefix also matches string-resource
+    identifiers (e.g. `live_chat_video_action_toggle_button_key`) that are not
+    real Lob API keys, so such findings must not be reported.
+    """
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={"content": b"some file content", "path": "live_chat_toggle_button.js"},
+    )
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"DetectorName":"Lob","Verified":true,'
+        b'"Raw":"live_chat_video_action_toggle_button_key",'
+        b'"Redacted":"live_chat_video_action_toggle_button_key"}',
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 0
+
+
+def testTrufflehog_whenLobDetectorMatchesValidKey_reportVulnerability(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """A verified Lob finding whose token is a real Lob API key is still reported."""
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={"content": b"some file content", "path": "config.js"},
+    )
+    valid_lob_key = "live_" + "a" * 35
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=(
+            b'{"DetectorName":"Lob","Verified":true,"Raw":"'
+            + valid_lob_key.encode()
+            + b'","Redacted":"'
+            + valid_lob_key.encode()
+            + b'"}'
+        ),
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["risk_rating"] == "HIGH"
+    assert (
+        f"Secret `{valid_lob_key}` of type `Lob` found in file `config.js`."
+        == agent_mock[0].data["technical_detail"]
+    )
+
+
 def testAgent_whenFileTypeIsUnrelated_skipIt(
     apk_message_file: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,

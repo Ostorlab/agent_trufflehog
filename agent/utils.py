@@ -77,6 +77,29 @@ def construct_repository_archive_asset_directory(content_url: str) -> str:
     return path_segments[uploads_index + 1]
 
 
+# A real Lob API key is the `live_`/`test_` prefix followed by exactly 35
+# lowercase hexadecimal characters (TruffleHog's Lob detector). The detector's
+# loose prefix match also flags UI/localization string-resource keys that
+# merely *begin* with `live_` or `test_` (e.g.
+# `live_chat_video_action_toggle_button_key`); those are identifiers, not
+# secrets, and are excluded by requiring the strict key format.
+_LOB_API_KEY_PATTERN = re.compile(r"^(live|test)_[a-f0-9]{35}$")
+
+
+def is_plausible_lob_api_key(token: str) -> bool:
+    """Report whether ``token`` looks like a real Lob API key.
+
+    Args:
+        token: The secret reported by TruffleHog.
+
+    Returns:
+        True when the token matches the strict Lob API key format, False for
+        tokens that only share the ``live_``/``test_`` prefix (such as UI
+        string-resource keys) and are therefore not Lob secrets.
+    """
+    return _LOB_API_KEY_PATTERN.fullmatch(token) is not None
+
+
 def should_exclude_path(
     path: str | None, exclude_path_regexes: list[str] | None
 ) -> bool:

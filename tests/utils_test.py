@@ -341,3 +341,33 @@ def testConstructRepositoryArchiveAssetDirectory_whenUploadsTrailingSlash_raises
         utils.construct_repository_archive_asset_directory(
             "https://example.com/uploads/"
         )
+
+
+def testIsPlausibleLobApiKey_whenValidLiveKey_shouldReturnTrue() -> None:
+    """A `live_` prefixed key of 35 lowercase hex characters is a plausible Lob key."""
+    token = "live_" + "a" * 35
+
+    assert utils.is_plausible_lob_api_key(token) is True
+
+
+def testIsPlausibleLobApiKey_whenValidTestKey_shouldReturnTrue() -> None:
+    """A `test_` prefixed key of 35 lowercase hex characters is a plausible Lob key."""
+    token = "test_" + "f" * 35
+
+    assert utils.is_plausible_lob_api_key(token) is True
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "live_chat_video_action_toggle_button_key",
+        "test_tokenynpaLandingPageBenefitsHeader4",
+        "live_abc",
+        "live_" + "A" * 35,
+        "live_" + "g" * 35,
+        "staging_" + "a" * 35,
+    ],
+)
+def testIsPlausibleLobApiKey_whenNotALobKey_shouldReturnFalse(token: str) -> None:
+    """Tokens that only share the `live_`/`test_` prefix are not Lob secrets."""
+    assert utils.is_plausible_lob_api_key(token) is False
