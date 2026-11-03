@@ -9,9 +9,10 @@ RUN apk add git
 # test_<35 chars>) being matched, 403-verified and reported as live Lob keys;
 # unpinned-main images built before that commit emit those as high-rated
 # findings. Bump the tag deliberately; keep it at or above that fix.
-RUN git clone https://github.com/trufflesecurity/trufflehog.git trufflehog \
-    && cd trufflehog \
-    && git checkout ea68ca03c865c5f324e86e849ced20ed3cf9dbbb
+# The tag-bounded shallow clone is deterministic for a given tag and keeps
+# the build network transfer small.
+RUN git clone --branch v3.99.8 --depth 1 \
+        https://github.com/trufflesecurity/trufflehog.git trufflehog
 RUN cd trufflehog ; go build -o trufflehog
 
 FROM python:3.14-alpine as base
