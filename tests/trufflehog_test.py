@@ -2,6 +2,7 @@
 
 import logging
 import pathlib
+from collections.abc import Callable
 
 import pytest
 from ostorlab.agent.message import message
@@ -856,3 +857,82 @@ def testTruffleHog_whenFilePathIsNotExcluded_processMessage(
     trufflehog_agent_file_with_exclude_path_regexes.process(msg)
 
     assert subprocess_mock.call_count == 1
+
+
+def testTrufflehog_whenLinkInScopeUrlsRegex_scansLink(
+    scan_message_gihub_without_key: message.Message,
+    trufflehog_agent_with_scope_factory: Callable[
+        [str], trufflehog_agent.TruffleHogAgent
+    ],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Git links inside the URL scope are scanned."""
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
+    agent = trufflehog_agent_with_scope_factory(
+        r"https://github\.com/trufflesecurity/.*"
+    )
+
+    agent.process(scan_message_gihub_without_key)
+
+    assert subprocess_check_output_mock.call_count == 1
+
+
+def testTrufflehog_whenLinkOutOfScopeUrlsRegex_doesNotScanNorReportLink(
+    scan_message_gihub_without_key: message.Message,
+    trufflehog_agent_with_scope_factory: Callable[
+        [str], trufflehog_agent.TruffleHogAgent
+    ],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Git links outside the URL scope are neither cloned nor reported."""
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
+    agent = trufflehog_agent_with_scope_factory(r"https://example\.com.*")
+
+    agent.process(scan_message_gihub_without_key)
+
+    assert subprocess_check_output_mock.call_count == 0
+    assert len(agent_mock) == 0
+
+
+def testTrufflehog_whenScopeUrlsRegexInvalid_doesNotScanLink(
+    trufflehog_agent_with_scope_factory: Callable[
+        [str], trufflehog_agent.TruffleHogAgent
+    ],
+    scan_message_gihub_without_key: message.Message,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """An invalid scope regex skips links instead of crashing the agent."""
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
+    agent = trufflehog_agent_with_scope_factory("https://(github.com")
+
+    agent.process(scan_message_gihub_without_key)
+
+    assert subprocess_check_output_mock.call_count == 0
+
+
+def testTrufflehog_whenFileWithScopeUrlsRegex_scansFile(
+    trufflehog_agent_with_scope_factory: Callable[
+        [str], trufflehog_agent.TruffleHogAgent
+    ],
+    scan_message_file: message.Message,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """The URL scope does not apply to files, which have no URL."""
+    subprocess_check_output_mock = mocker.patch(
+        "subprocess.check_output", return_value=b""
+    )
+    agent = trufflehog_agent_with_scope_factory(r"https://example\.com.*")
+
+    agent.process(scan_message_file)
+
+    assert subprocess_check_output_mock.call_count == 1

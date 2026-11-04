@@ -58,6 +58,9 @@ args:
   - name: "exclude_path_regexes"
     type: "array"
     description: "List of regex patterns; files whose path matches any pattern are skipped."
+  - name: "scope_urls_regex"
+    type: "string"
+    description: "Regular expression of the URLs in the scan scope, matched with re.match against the start of the link URL. Out-of-scope git links are neither cloned nor reported; files, repositories, logs and captured traffic are not filtered. Anchor the end of the host to exclude look-alike hosts such as <domain>.evil.com. Empty means no filtering."
 docker_file_path : Dockerfile # Dockerfile path for automated release build.
 docker_build_root : . # Docker build dir for automated release build.
 volumes:

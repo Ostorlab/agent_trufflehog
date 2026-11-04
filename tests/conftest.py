@@ -5,6 +5,7 @@ conftest for trufflehog agent tests
 import json
 import pathlib
 import random
+from collections.abc import Callable
 
 import pytest
 from ostorlab.agent import definitions as agent_definitions
@@ -174,3 +175,32 @@ def log_contents() -> list[message.Message]:
                 )
             )
     return messages
+
+
+@pytest.fixture()
+def trufflehog_agent_with_scope_factory(
+    agent_persist_mock: dict[str | bytes, str | bytes],
+) -> Callable[[str], trufflehog_agent.TruffleHogAgent]:
+    """Returns a builder of TruffleHog agents configured with a given scope URLs regex."""
+    del agent_persist_mock
+
+    def _build(scope_urls_regex: str) -> trufflehog_agent.TruffleHogAgent:
+        with (pathlib.Path(__file__).parent.parent / "ostorlab.yaml").open() as yaml_o:
+            definition = agent_definitions.AgentDefinition.from_yaml(yaml_o)
+            settings = runtime_definitions.AgentSettings(
+                key="agent/ostorlab/trufflehog",
+                bus_url="NA",
+                bus_exchange_topic="NA",
+                args=[
+                    utils_definitions.Arg(
+                        name="scope_urls_regex",
+                        type="string",
+                        value=json.dumps(scope_urls_regex).encode(),
+                    )
+                ],
+                healthcheck_port=random.randint(5000, 6000),
+                redis_url="redis://guest:guest@localhost:6379",
+            )
+            return trufflehog_agent.TruffleHogAgent(definition, settings)
+
+    return _build

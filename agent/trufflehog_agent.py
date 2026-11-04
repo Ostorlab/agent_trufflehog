@@ -244,6 +244,29 @@ def _get_asset_directory(message: m.Message) -> str | None:
     return None
 
 
+def _compile_scope_urls_regex(scope_urls_regex: str | None) -> re.Pattern[str] | None:
+    """Compile the scope regex once, when the agent starts.
+
+    Args:
+        scope_urls_regex: The scope regex, or None or "" for no filtering.
+
+    Returns:
+        The compiled regex, None without a scope regex, or a regex matching nothing when the scope regex is invalid,
+        so an invalid scope puts every link out of scope and is only logged once.
+    """
+    if scope_urls_regex is None or scope_urls_regex == "":
+        return None
+    try:
+        return re.compile(scope_urls_regex)
+    except re.error as e:
+        logger.error(
+            "Invalid scope_urls_regex %s: %s. No link will be scanned.",
+            scope_urls_regex,
+            e,
+        )
+        return re.compile(r"(?!)")
+
+
 class TruffleHogAgent(
     agent.Agent,
     agent_persist_mixin.AgentPersistMixin,
@@ -262,6 +285,20 @@ class TruffleHogAgent(
         """Construct necessary attributes of the TruffleHogAgent Agent instance."""
         super().__init__(agent_definition, agent_settings)
         agent_persist_mixin.AgentPersistMixin.__init__(self, agent_settings)
+        self._scope_urls_pattern = _compile_scope_urls_regex(
+            self.args.get("scope_urls_regex")
+        )
+
+    def _is_link_in_scope(self, link: str) -> bool:
+        """Check whether a link matches the scope regex. Without a scope regex every link is in scope."""
+        if self._scope_urls_pattern is None:
+            return True
+        if self._scope_urls_pattern.match(link) is not None:
+            return True
+        logger.info(
+            "Link %s is not in scope %s", link, self._scope_urls_pattern.pattern
+        )
+        return False
 
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(LOCK_RETRIES),
@@ -388,6 +425,8 @@ class TruffleHogAgent(
             link = message.data.get("url", "")
             link_type = input_type_handler.get_link_type(link)
             if link_type is None:
+                return
+            if self._is_link_in_scope(link) is False:
                 return
             logger.info("Processing link %s of type %s", link, link_type)
             cmd_output = self.run_scanner(link_type, link)
