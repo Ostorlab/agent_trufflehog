@@ -8,8 +8,12 @@ RUN apk add git
 # detector to fix false positives") carry the old Lob detector, which reports
 # any exactly-35-char [a-zA-Z0-9_] identifier after live_/test_ (pytest names,
 # Android resource names) as a Verified Lob key. Future detector updates are
-# explicit tag bumps.
-RUN git clone --branch v3.99.8 --depth 1 https://github.com/trufflesecurity/trufflehog.git trufflehog
+# explicit tag bumps. The tag is a mutable ref, so the checkout is
+# guarded by a SHA assertion: if upstream ever re-points or deletes
+# v3.99.8, the build fails loudly instead of silently carrying a
+# different detector set.
+RUN git clone --branch v3.99.8 --depth 1 https://github.com/trufflesecurity/trufflehog.git trufflehog && \
+    cd trufflehog && test "$(git rev-parse HEAD)" = ea68ca03c865c5f324e86e849ced20ed3cf9dbbb
 RUN cd trufflehog ; go build -o trufflehog
 
 FROM python:3.14-alpine as base
