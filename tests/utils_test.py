@@ -105,6 +105,37 @@ def testEscapeBacktick_always_returnExpectedText() -> None:
 
 
 @pytest.mark.parametrize(
+    "token",
+    [
+        "da2-4i5uwxkhgjg2lcis4nfqy5biee",
+        "da2-" + "a" * 26,
+        "da2-" + "z" * 26,
+        "da2-" + "0" * 26,
+        "da2-" + "1a2b3c4d5e6f7g8h9i0j1k2l3m",
+    ],
+)
+def testIsAppSyncApiKey_whenValidAppSyncKey_returnsTrue(token: str) -> None:
+    assert utils.is_appsync_api_key(token) is True
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "da2-" + "A" * 26,  # uppercase is not part of the AppSync key charset
+        "da2-" + "a" * 25,  # too short
+        "da2-" + "a" * 27,  # too long
+        "da3-" + "a" * 26,  # wrong prefix
+        "da2-",
+        "da2-" + "_" * 26,
+        "not_an_appsync_key",
+        "",
+    ],
+)
+def testIsAppSyncApiKey_whenNotAppSyncKey_returnsFalse(token: str) -> None:
+    assert utils.is_appsync_api_key(token) is False
+
+
+@pytest.mark.parametrize(
     "path,content,type",
     [
         (

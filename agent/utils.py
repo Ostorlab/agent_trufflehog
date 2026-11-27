@@ -77,6 +77,30 @@ def construct_repository_archive_asset_directory(content_url: str) -> str:
     return path_segments[uploads_index + 1]
 
 
+# An AWS AppSync API key is a `da2-` prefix followed by exactly 26 lowercase
+# alphanumeric characters (TruffleHog's AWSAppSync detector). Unlike most AWS
+# credentials, AppSync API keys are *designed* to be public: they are the
+# client-side identifier for the API_KEY authorization mode and ship embedded
+# in every Amplify/AppSync client application (e.g.
+# `res/raw/amplifyconfiguration.json`). AWS treats them as public information,
+# not as secrets, so they must not be reported as "Secret information stored
+# in the application".
+_APPSYNC_API_KEY_PATTERN = re.compile(r"^da2-[a-z0-9]{26}$")
+
+
+def is_appsync_api_key(token: str) -> bool:
+    """Report whether ``token`` is an AWS AppSync API key.
+
+    Args:
+        token: The secret reported by TruffleHog.
+
+    Returns:
+        True when the token matches the AppSync API key format (`da2-` plus 26
+        lowercase alphanumeric characters), False otherwise.
+    """
+    return _APPSYNC_API_KEY_PATTERN.fullmatch(token) is not None
+
+
 def should_exclude_path(
     path: str | None, exclude_path_regexes: list[str] | None
 ) -> bool:

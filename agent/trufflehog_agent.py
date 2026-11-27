@@ -356,10 +356,20 @@ class TruffleHogAgent(
             if secret_token is None:
                 logger.error("Trying to emit a vulnerability with no secret: %s", vuln)
                 continue
+            secret_type = vuln.get("DetectorName")
+            if (
+                secret_type == "AWSAppSync"
+                and utils.is_appsync_api_key(secret_token) is True
+            ):
+                logger.info(
+                    "Skipping AWSAppSync finding %r: AppSync API keys are public "
+                    "client-side identifiers, not secrets.",
+                    secret_token,
+                )
+                continue
             secret_token = utils.escape_backtick(secret_token)
             logger.info("Secret found : %s.", vuln["Redacted"])
             technical_detail = f"""Secret `{secret_token}` """
-            secret_type = vuln.get("DetectorName")
             if secret_type is not None:
                 technical_detail += f"""of type `{secret_type}` """
             path = message.data.get("path")

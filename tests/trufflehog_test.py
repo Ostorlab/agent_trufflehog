@@ -936,3 +936,59 @@ def testTrufflehog_whenFileWithScopeUrlsRegex_scansFile(
     agent.process(scan_message_file)
 
     assert subprocess_check_output_mock.call_count == 1
+
+
+def testTrufflehog_whenAWSAppSyncApiKeyInClientConfig_notReportVulnerability(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """An AWS AppSync API key is a public client-side identifier, not a secret."""
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"DetectorName":"AWSAppSync","Verified":true,'
+        b'"Raw":"da2-4i5uwxkhgjg2lcis4nfqy5biee",'
+        b'"Redacted":"da2-4i5uwxkhgjg2lcis4nfqy5biee"}',
+    )
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={
+            "content": b"some file content",
+            "path": "res/raw/amplifyconfiguration.json",
+            "android_metadata": {"package_name": "com.storyboardpodcasts.walkietalkie"},
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 0
+
+
+def testTrufflehog_whenNonAppSyncSecretSharesAppSyncTokenFormat_stillReports(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Suppression is scoped to the AWSAppSync detector; other detectors still report."""
+    mocker.patch(
+        "subprocess.check_output",
+        return_value=b'{"DetectorName":"URI","Verified":true,'
+        b'"Raw":"da2-4i5uwxkhgjg2lcis4nfqy5biee",'
+        b'"Redacted":"da2-4i5uwxkhgjg2lcis4nfqy5biee"}',
+    )
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={
+            "content": b"some file content",
+            "path": "res/raw/amplifyconfiguration.json",
+            "android_metadata": {"package_name": "com.storyboardpodcasts.walkietalkie"},
+        },
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].selector == "v3.report.vulnerability"
+    assert agent_mock[0].data.get("risk_rating") == "HIGH"
