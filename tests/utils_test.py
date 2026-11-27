@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 import pytest
+from pytest_mock import plugin
 
 from agent import utils
 
@@ -170,6 +171,16 @@ def testIsShortLivedSessionTokenJwt_whenNotAJwt_isFalse() -> None:
 def testIsShortLivedSessionTokenJwt_whenMalformedJwt_isFalse() -> None:
     """A token that is not a well-formed three-segment JWT is not matched."""
     assert utils.is_short_lived_session_token_jwt("header.payload") is False
+
+
+def testIsShortLivedSessionTokenJwt_whenJsonExceedsRecursionLimit_isFalse(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Treat payloads the JSON parser cannot decode as ordinary secrets."""
+    token = _build_jwt({"iat": 1000, "exp": 1001})
+    mocker.patch("agent.utils.json.loads", side_effect=RecursionError)
+
+    assert utils.is_short_lived_session_token_jwt(token) is False
 
 
 def testIsShortLivedSessionTokenJwt_whenPayloadIsNotObject_isFalse() -> None:

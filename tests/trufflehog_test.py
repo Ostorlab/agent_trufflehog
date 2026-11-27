@@ -301,6 +301,32 @@ def testTruffleHog_whenVerifiedShortLivedSessionTokenJwt_notReportVulnerability(
     assert len(agent_mock) == 0
 
 
+@pytest.mark.parametrize(("lifetime", "expected_reports"), [(600, 0), (30 * 86400, 1)])
+def testTruffleHog_whenJwtLacksRedactedField_processesFinding(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    caplog: pytest.LogCaptureFixture,
+    lifetime: int,
+    expected_reports: int,
+) -> None:
+    """Process findings without a redacted value and never log the raw JWT."""
+    token = _build_jwt({"iat": 1000, "exp": 1000 + lifetime})
+    finding = {"DetectorName": "JWT", "Verified": True, "Raw": token}
+    mocker.patch("subprocess.check_output", return_value=json.dumps(finding).encode())
+    caplog.set_level(logging.INFO)
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={"content": b"some file content", "path": "/tmp/path/file.txt"},
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == expected_reports
+    assert token not in caplog.text
+
+
 def testTruffleHog_whenVerifiedLongLivedJwt_reportVulnerability(
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: dict[str | bytes, str | bytes],

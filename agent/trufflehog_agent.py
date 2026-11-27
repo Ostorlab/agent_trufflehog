@@ -353,7 +353,8 @@ class TruffleHogAgent(
     ) -> None:
         for vuln in vulnz:
             raw_secret = vuln.get("Raw")
-            secret_token = raw_secret or vuln.get("Redacted")
+            redacted_secret = vuln.get("Redacted")
+            secret_token = raw_secret or redacted_secret
             if secret_token is None:
                 logger.error("Trying to emit a vulnerability with no secret: %s", vuln)
                 continue
@@ -362,11 +363,11 @@ class TruffleHogAgent(
                 and utils.is_short_lived_session_token_jwt(raw_secret) is True
             ):
                 logger.info(
-                    "Skipping short-lived session token JWT: %s", vuln["Redacted"]
+                    "Skipping short-lived session token JWT: %s", redacted_secret
                 )
                 continue
             secret_token = utils.escape_backtick(secret_token)
-            logger.info("Secret found : %s.", vuln["Redacted"])
+            logger.info("Secret found : %s.", redacted_secret)
             technical_detail = f"""Secret `{secret_token}` """
             secret_type = vuln.get("DetectorName")
             if secret_type is not None:

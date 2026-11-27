@@ -195,7 +195,7 @@ def _decode_jwt_payload(secret_token: str) -> dict[str, Any] | None:
         padding = "=" * ((4 - len(payload) % 4) % 4)
         decoded = base64.urlsafe_b64decode((payload + padding).encode("ascii"))
         data = json.loads(decoded)
-    except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+    except (ValueError, RecursionError):
         return None
     if isinstance(data, dict) is False:
         return None
