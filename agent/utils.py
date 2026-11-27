@@ -215,23 +215,19 @@ def is_short_lived_session_token_jwt(secret_token: str) -> bool:
         secret_token: The candidate secret.
 
     Returns:
-        True when the token is a JWT whose payload marks it as a short-lived
-        session token: either it declares a Cognito session ``token_use`` of
-        ``id`` or ``access``, or it carries both ``iat`` and ``exp`` claims with
-        a lifetime within the session-token window. Any other value (a
-        long-lived JWT, a non-JWT secret, or an unparseable token) returns
-        False.
+        True when the JWT's ``iat`` and ``exp`` claims show a lifetime within the
+        session-token window. If present as a string, ``token_use`` must be
+        ``id`` or ``access``.
     """
     payload = _decode_jwt_payload(secret_token)
     if payload is None:
         return False
     token_use = payload.get("token_use")
-    if isinstance(token_use, str):
-        # An explicit token_use claim names the token kind: only the Cognito
-        # session kinds (id/access) are transient; any other kind, such as a
-        # refresh token, is not treated as a session token even with a short
-        # window.
-        return token_use.lower() in JWT_TOKEN_USE_SESSION_VALUES
+    if (
+        isinstance(token_use, str)
+        and token_use.lower() not in JWT_TOKEN_USE_SESSION_VALUES
+    ):
+        return False
     iat = payload.get("iat")
     exp = payload.get("exp")
     if isinstance(iat, int) and isinstance(exp, int):

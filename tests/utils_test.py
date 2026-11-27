@@ -156,6 +156,19 @@ def testIsShortLivedSessionTokenJwt_whenLongLivedJwt_isFalse() -> None:
     assert utils.is_short_lived_session_token_jwt(token) is False
 
 
+@pytest.mark.parametrize("token_use", ["id", "access"])
+@pytest.mark.parametrize("expiration", [None, 1000 + 30 * 24 * 60 * 60])
+def testIsShortLivedSessionTokenJwt_whenSessionLifetimeIsUnproven_isFalse(
+    token_use: str, expiration: int | None
+) -> None:
+    """A session claim alone cannot establish that a JWT is short-lived."""
+    claims: dict[str, Any] = {"token_use": token_use, "iat": 1000}
+    if expiration is not None:
+        claims["exp"] = expiration
+
+    assert utils.is_short_lived_session_token_jwt(_build_jwt(claims)) is False
+
+
 def testIsShortLivedSessionTokenJwt_whenRefreshTokenUse_isFalse() -> None:
     """A token_use value other than id/access is not treated as a session token."""
     token = _build_jwt({"token_use": "refresh", "iat": 1000, "exp": 1001})
