@@ -1,14 +1,40 @@
 """Unittest for truflehog agent."""
 
+import base64
+import json
 import logging
 import pathlib
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from ostorlab.agent.message import message
 from pytest_mock import plugin
 
 from agent import trufflehog_agent
+
+
+def _build_jwt(payload: dict[str, Any]) -> str:
+    """Build a compact JWT string with a fixed header and a base64url payload."""
+    header = {"alg": "RS256", "kid": "test-kid"}
+
+    def _segment(data: dict[str, Any]) -> str:
+        raw = json.dumps(data, separators=(",", ":")).encode("ascii")
+        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+
+    return f"{_segment(header)}.{_segment(payload)}.c2lnbmF0dXJl"
+
+
+def _jwt_vulnerability(token: str) -> bytes:
+    """Serialize a verified JWT finding as trufflehog NDJSON output."""
+    return json.dumps(
+        {
+            "DetectorName": "JWT",
+            "Verified": True,
+            "Raw": token,
+            "Redacted": token[:10] + "****",
+        }
+    ).encode()
 
 
 def testTruffleHog_whenFileHasFinding_reportVulnerabilities(
@@ -248,7 +274,54 @@ def testAgent_whenFileTypeIsUnrelated_skipIt(
     assert subprocess_mock.call_count == 0
 
 
-def testTrufflehog_whenProcessingSecrets_shouldLogNonCriticalMessagesAtDebugLeve(
+def testTruffleHog_whenVerifiedShortLivedSessionTokenJwt_notReportVulnerability(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """A verified Cognito ID token (a short-lived session token) is not reported."""
+    token = _build_jwt(
+        {
+            "sub": "9245a4e4-e011-7069-98a1-0c30cca61479",
+            "iss": "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_0qT3FNUlW",
+            "token_use": "id",
+            "iat": 1795143222,
+            "exp": 1795143821,
+        }
+    )
+    mocker.patch("subprocess.check_output", return_value=_jwt_vulnerability(token))
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={"content": b"some file content", "path": "/tmp/path/file.txt"},
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 0
+
+
+def testTruffleHog_whenVerifiedLongLivedJwt_reportVulnerability(
+    trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
+    agent_persist_mock: dict[str | bytes, str | bytes],
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """A verified long-lived JWT is still reported as a stored secret."""
+    token = _build_jwt({"iat": 1795143222, "exp": 1795143222 + 30 * 24 * 60 * 60})
+    mocker.patch("subprocess.check_output", return_value=_jwt_vulnerability(token))
+    msg = message.Message.from_data(
+        selector="v3.asset.file",
+        data={"content": b"some file content", "path": "/tmp/path/file.txt"},
+    )
+
+    trufflehog_agent_file.process(msg)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].selector == "v3.report.vulnerability"
+
+
+def testTruffleHog_whenProcessingSecrets_shouldLogNonCriticalMessagesAtDebugLeve(
     scan_message_file: message.Message,
     trufflehog_agent_file: trufflehog_agent.TruffleHogAgent,
     agent_persist_mock: dict[str | bytes, str | bytes],

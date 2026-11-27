@@ -1,10 +1,11 @@
 """Helper functions for the Trufflehog agent"""
 
+import base64
 import json
 import logging
 import os
 import re
-from typing import Any
+from typing import Any, cast
 from urllib import parse
 
 import magic
@@ -161,6 +162,83 @@ def escape_backtick(text: str) -> str:
         The modified text with backticks escaped.
     """
     return text.replace("`", r"\`")
+
+
+# Token `token_use` claim values that identify a Cognito session token (an ID or
+# an access token), as opposed to a long-lived credential. These tokens are
+# minted for the running session and never persisted as application secrets.
+JWT_TOKEN_USE_SESSION_VALUES = {"id", "access"}
+
+# A session token has a short `iat`/`exp` window. Tokens whose lifetime is at
+# most this many seconds are treated as transient session credentials.
+SESSION_TOKEN_MAX_LIFETIME_SECONDS = 12 * 60 * 60
+
+JWT_SEGMENT_COUNT = 3
+
+
+def _decode_jwt_payload(secret_token: str) -> dict[str, Any] | None:
+    """Decode and parse the payload segment of a JSON Web Token.
+
+    Args:
+        secret_token: The candidate secret, expected to be a compact JWT of the
+            form ``<header>.<payload>.<signature>``.
+
+    Returns:
+        The parsed payload as a dict, or None when the value is not a
+        well-formed three-segment JWT, its payload is not valid base64url JSON,
+        or the payload is not a JSON object.
+    """
+    if secret_token.count(".") != JWT_SEGMENT_COUNT - 1:
+        return None
+    _header, payload, _signature = secret_token.split(".")
+    try:
+        padding = "=" * ((4 - len(payload) % 4) % 4)
+        decoded = base64.urlsafe_b64decode((payload + padding).encode("ascii"))
+        data = json.loads(decoded)
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if isinstance(data, dict) is False:
+        return None
+    return cast(dict[str, Any], data)
+
+
+def is_short_lived_session_token_jwt(secret_token: str) -> bool:
+    """Report whether a secret is a short-lived session token JWT.
+
+    Mobile runtime logs and auth responses frequently contain short-lived
+    session tokens — Cognito ID and access tokens carry a ``token_use`` claim of
+    ``id`` or ``access``, and session tokens in general are minted with a short
+    ``iat``/``exp`` window. These are transient session credentials of the test
+    run, not secrets persisted in the application.
+
+    Args:
+        secret_token: The candidate secret.
+
+    Returns:
+        True when the token is a JWT whose payload marks it as a short-lived
+        session token: either it declares a Cognito session ``token_use`` of
+        ``id`` or ``access``, or it carries both ``iat`` and ``exp`` claims with
+        a lifetime within the session-token window. Any other value (a
+        long-lived JWT, a non-JWT secret, or an unparseable token) returns
+        False.
+    """
+    payload = _decode_jwt_payload(secret_token)
+    if payload is None:
+        return False
+    token_use = payload.get("token_use")
+    if isinstance(token_use, str):
+        # An explicit token_use claim names the token kind: only the Cognito
+        # session kinds (id/access) are transient; any other kind, such as a
+        # refresh token, is not treated as a session token even with a short
+        # window.
+        return token_use.lower() in JWT_TOKEN_USE_SESSION_VALUES
+    iat = payload.get("iat")
+    exp = payload.get("exp")
+    if isinstance(iat, int) and isinstance(exp, int):
+        lifetime = exp - iat
+        if 0 <= lifetime <= SESSION_TOKEN_MAX_LIFETIME_SECONDS:
+            return True
+    return False
 
 
 def get_file_type(filename: str, file_content: bytes) -> str:
